@@ -6,6 +6,13 @@ import { excursions, impliedFx, runningPnl, type PnlPoint } from "@/lib/trades/d
 import type { TradeDTO } from "./trade-detail";
 
 const BARS_EACH_SIDE = 60;
+const MAX_CONTEXT_S = 8 * 3600;
+
+/**
+ * Bars of context shown either side of a trade. Sixty bars of 15 minutes would be 15 hours each side and force two or
+ * three extra days of minute prices to be downloaded, so the context is capped at about 8 hours.
+ */
+export const contextBars = (stepSec: number) => (stepSec <= 900 ? Math.min(BARS_EACH_SIDE, Math.ceil(MAX_CONTEXT_S / stepSec)) : BARS_EACH_SIDE);
 
 export interface PriceCheck {
   /** false when the data feed shows a clearly different price from the entry (different broker, feed or symbol) */
@@ -56,8 +63,9 @@ const startOfUtcDay = (nowSec: number) => Math.floor(nowSec / 86_400) * 86_400;
 export async function loadChart(t: TradeDTO, tf: Timeframe, now = new Date(), warm = 0): Promise<ChartData> {
   const step = TF_SECONDS[tf];
   const nowSec = now.getTime() / 1000;
-  const from = Math.floor((sec(t.openedAt) - (BARS_EACH_SIDE + Math.max(0, warm)) * step) / step) * step;
-  const to = Math.min((t.closedAt ? sec(t.closedAt) : nowSec) + BARS_EACH_SIDE * step, nowSec);
+  const pad = contextBars(step);
+  const from = Math.floor((sec(t.openedAt) - (pad + Math.max(0, warm)) * step) / step) * step;
+  const to = Math.min((t.closedAt ? sec(t.closedAt) : nowSec) + pad * step, nowSec);
   const { candles, incomplete, unsupported } = await getCandles(t.symbol, tf, from, to);
 
   const long = t.side === "LONG";

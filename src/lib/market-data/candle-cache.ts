@@ -19,15 +19,14 @@ export interface CandleResult {
 
 /**
  * Candles for [fromSec, toSec) on any timeframe. Downloads happen only for periods not already in the
- * database (one request per UTC day for minute data, per month for hourly), strictly one at a time to be
- * polite to the data source, and are stored forever. Coarser timeframes are aggregated from the native ones.
+ * database (one request per UTC day for minute data, per month for hourly), a few at a time, and are stored forever. Coarser timeframes are aggregated from the native ones.
  */
 export async function getCandles(
   symbol: string,
   tf: Timeframe,
   fromSec: number,
   toSec: number,
-  opts: { provider?: MarketDataProvider; now?: Date; maxFetch?: number; gapMs?: number } = {},
+  opts: { provider?: MarketDataProvider; now?: Date; maxFetch?: number; gapMs?: number; concurrency?: number } = {},
 ): Promise<CandleResult> {
   const provider = opts.provider ?? dukascopy;
   if (!provider.supports(symbol)) return { candles: [], incomplete: false, unsupported: true };
@@ -50,8 +49,9 @@ export async function getCandles(
 
     const limit = opts.maxFetch ?? 14;
     if (todo.length > limit) incomplete = true;
-    for (const [i, period] of todo.slice(0, limit).entries()) {
-      if (i > 0) await sleep(opts.gapMs ?? 150);
+    // a few downloads at a time: a window spanning several days takes as long as the slowest day, not the sum of them
+    await mapPool(todo.slice(0, limit), opts.concurrency ?? 4, async (period) => {
+      if (opts.gapMs) await sleep(opts.gapMs);
       try {
         const candles = await provider.fetchPeriod(symbol, native, period);
         const [start, end] = periodRange(native, period);
@@ -71,7 +71,7 @@ export async function getCandles(
       } catch {
         incomplete = true; // leave uncovered so the next request retries it
       }
-    }
+    });
   }
 
   const rows = await db.candle.findMany({
@@ -102,3 +102,13 @@ export async function getCandles(
 }
 
 const n = (v: Prisma.Decimal | null) => (v == null ? 0 : Number(v));
+
+/** Run `fn` over the items with at most `size` running at once. */
+async function mapPool<T>(items: T[], size: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(size, items.length) }, async () => {
+      while (next < items.length) await fn(items[next++]);
+    }),
+  );
+}

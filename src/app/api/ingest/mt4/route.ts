@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashToken, ingestEaPayload, payloadSchema } from "@/lib/import/ea";
+import { warmRecent } from "@/lib/market-data/warm";
 
 export const maxDuration = 60;
 
@@ -37,6 +38,8 @@ export async function POST(req: Request) {
 
   try {
     const result = await ingestEaPayload(account, parsed.data);
+    // new trades arrived: fetch the prices around the latest days now, so their charts open instantly
+    if (result.trades > 0) after(() => warmRecent(account.id).catch(() => undefined));
     return json({ ok: true, ...result, serverTime: new Date().toISOString() });
   } catch (e) {
     await db.account.update({ where: { id: account.id }, data: { lastSyncError: e instanceof Error ? e.message.slice(0, 300) : "ingest failed" } }).catch(() => undefined);

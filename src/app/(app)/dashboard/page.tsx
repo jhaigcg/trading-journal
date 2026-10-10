@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { warmDay } from "@/lib/market-data/warm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -75,6 +77,8 @@ async function DashboardBody({ sp, f, timezone }: { sp: Params; f: Filters; time
   const month = isYearMonth(calParam) ? calParam : currentMonth;
 
   const dayParam = first(sp.day);
+  // opening a day: fetch that day's prices in the background so any trade chart you click next opens instantly
+  if (dayParam) after(() => warmDay(dayParam).catch(() => undefined));
   const [d, calDays, dayDetail] = await Promise.all([loadDashboard(f, { cum }), loadCalendarMonth(f, month), dayParam ? loadDayDetail(dayParam, f) : null]);
   const { summary: s, daySummary: ds, currency: ccy } = d;
 
