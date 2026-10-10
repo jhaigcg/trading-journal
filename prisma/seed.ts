@@ -141,6 +141,12 @@ async function main() {
     });
   }
 
+  // production: SEED_DEMO=0 creates only the login, settings, tags and starter playbooks, never fake trades
+  if (process.env.SEED_DEMO === "0") {
+    console.log(`Created your login (${email}), settings, tags and starter playbooks. No demo trades (SEED_DEMO=0).`);
+    return;
+  }
+
   // ── demo account + trades ──
   await db.account.deleteMany({ where: { name: DEMO_ACCOUNT } });
   const account = await db.account.create({

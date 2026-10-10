@@ -1,65 +1,75 @@
-`# Ledger. — personal trading journal
-`
-`Next.js (App Router) · TypeScript · Tailwind v4 · Prisma · PostgreSQL. Single user. Designed to deploy on **Vercel Hobby + Neon**.
-`Architecture and decisions: [PROPOSAL.md](PROPOSAL.md). Schema: [prisma/schema.prisma](prisma/schema.prisma).
-`
-`## Local setup
-`
-````bash
-`npm install
-`cp .env.example .env        # then fill AUTH_SECRET (openssl rand -hex 32), SEED_EMAIL, SEED_PASSWORD
-`npm run db:up               # Postgres in Docker (local dev only)
-`npm run db:migrate          # create tables
-`npm run db:seed             # your login + settings, tags, strategies, ~500 demo XAUUSD trades
-`npm run dev                 # http://localhost:3000
-`npm test                    # Vitest (metrics, date ranges)
-````
-`
-`The seed creates a demo account named "MT4 · Main account (demo data)". Re-running the seed replaces only that account's trades.
-`
-`## MT4 auto-sync (free): the LedgerSync Expert Advisor
-`
-`MT4 has no public API, so a small read-only EA ([mt4/LedgerSync.mq4](mt4/LedgerSync.mq4)) running in your terminal pushes trades to `/api/ingest/mt4`.
-`
-`1. **Accounts & import → Connect your MT4 account (free)**: enter the account number and pick your broker's server time (most brokers: "GMT+2 / GMT+3 with US daylight saving"). You get a token **once**; only its hash is stored.
-`2. Download `LedgerSync.mq4` from that screen (your address is pre-filled) into MT4's `MQL4\Experts` folder and restart MT4.
-`3. **Tools → Options → Expert Advisors**: allow WebRequest for your app's address.
-`4. In the Terminal window's **Account History** tab choose **All History**.
-`5. Drag the EA onto any chart, paste the token, and enable AutoTrading. The chart corner shows "connected".
-`
-`The first run uploads your full history; afterwards new trades arrive within seconds. MT4 does not need to be open all the time: when it next starts, the EA re-sends anything it missed. Pushes are idempotent, partial closes (MT4 splits them into two tickets) are merged into one trade even if the halves arrive in different requests, and nothing you edit in the journal is overwritten.
-`
-`**Broker time matters.** MT4 reports times in the broker's server clock. The accounts page shows a warning if the EA reports a clock that disagrees with your setting. Changing the setting re-converts every stored trade time (raw server times are kept for this).
-`
-`The EA source was written without access to MetaEditor: if it fails to compile, the error line shown in MetaEditor is all that is needed to fix it.
-`
-`## MT4 auto-sync (optional, paid): MetaApi
-`
-`MT4 has no public API, so trades can also be pulled through [MetaApi](https://metaapi.cloud) using your broker's **investor (read-only) password**.
-`
-`1. Create a MetaApi account and generate an API token. Put it in `.env` as `METAAPI_TOKEN` (and `METAAPI_REGION` if yours is not new-york). Check MetaApi's current pricing and free allowance.
-`2. In the app: **Accounts & import → Connect an MT4 account**. Enter the MT login, investor password, broker server name (exactly as in MT4, e.g. `ICMarketsSC-Live01`) and the date to import history from.
-`3. The first sync backfills history in 30-day chunks with a progress bar; after that it runs automatically each time you sign in, from **Resync**, and once a day via Vercel Cron (`/api/cron/sync`, set `CRON_SECRET`).
-`
-`The investor password is sent to MetaApi once and is never stored in this app's database. Syncing is idempotent (trades are keyed on account + MT4 ticket) and never overwrites what you edit in the journal (strategy, rating, tags, reviewed flag, your own stop/target). MT4 partial closes are merged into a single trade with several exits.
-`
-`Manual entry (**Accounts & import → Add trade manually**) supports multiple fills for scale-in/out.
-`
-`## Deploy (Vercel + Neon)
-`
-`1. Create a Neon project. Copy the **pooled** connection string to `DATABASE_URL` and the **direct** one to `DIRECT_URL`.
-`2. Run `npm run db:deploy` locally with those values to create tables, then `npm run db:seed` once to create your login.
-`3. Import the repo in Vercel and set `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `METAAPI_TOKEN`, `METAAPI_REGION` and `CRON_SECRET` as environment variables.
-`
-`## Project layout
-`
-`- `src/lib/metrics` — pure, unit-tested metric definitions (win %, profit factor, expectancy, drawdown, R, performance score)
-`- `src/lib/filters` — URL filter state → date ranges / queries
-`- `src/components` — design-system pieces (card, KPI tile, pill, drawer, data table, sidebar, filter bar)
-`- `src/proxy.ts` — redirects unauthenticated requests to `/login` (Next 16 renamed middleware to proxy)
-`- `prisma/seed.ts` — deterministic demo data
-`
-`## Status
+# Ledger. — personal trading journal
+
+Next.js (App Router) · TypeScript · Tailwind v4 · Prisma · PostgreSQL. Single user. Designed to deploy on **Vercel Hobby + Neon**.
+Architecture and decisions: [PROPOSAL.md](PROPOSAL.md). Schema: [prisma/schema.prisma](prisma/schema.prisma).
+
+## Local setup
+
+```bash
+npm install
+cp .env.example .env        # then fill AUTH_SECRET (openssl rand -hex 32), SEED_EMAIL, SEED_PASSWORD
+npm run db:up               # Postgres in Docker (local dev only)
+npm run db:migrate          # create tables
+npm run db:seed             # your login + settings, tags, strategies, ~500 demo XAUUSD trades
+npm run dev                 # http://localhost:3000
+npm test                    # Vitest (metrics, date ranges)
+```
+
+The seed creates a demo account named "MT4 · Main account (demo data)". Re-running the seed replaces only that account's trades.
+
+## MT4 auto-sync (free): the LedgerSync Expert Advisor
+
+MT4 has no public API, so a small read-only EA ([mt4/LedgerSync.mq4](mt4/LedgerSync.mq4)) running in your terminal pushes trades to `/api/ingest/mt4`.
+
+1. **Accounts & import → Connect your MT4 account (free)**: enter the account number and pick your broker's server time (most brokers: "GMT+2 / GMT+3 with US daylight saving"). You get a token **once**; only its hash is stored.
+2. Download `LedgerSync.mq4` from that screen (your address is pre-filled) into MT4's `MQL4\Experts` folder and restart MT4.
+3. **Tools → Options → Expert Advisors**: allow WebRequest for your app's address.
+4. In the Terminal window's **Account History** tab choose **All History**.
+5. Drag the EA onto any chart, paste the token, and enable AutoTrading. The chart corner shows "connected".
+
+The first run uploads your full history; afterwards new trades arrive within seconds. MT4 does not need to be open all the time: when it next starts, the EA re-sends anything it missed. Pushes are idempotent, partial closes (MT4 splits them into two tickets) are merged into one trade even if the halves arrive in different requests, and nothing you edit in the journal is overwritten.
+
+**Broker time matters.** MT4 reports times in the broker's server clock. The accounts page shows a warning if the EA reports a clock that disagrees with your setting. Changing the setting re-converts every stored trade time (raw server times are kept for this).
+
+The EA source was written without access to MetaEditor: if it fails to compile, the error line shown in MetaEditor is all that is needed to fix it.
+
+## MT4 auto-sync (optional, paid): MetaApi
+
+MT4 has no public API, so trades can also be pulled through [MetaApi](https://metaapi.cloud) using your broker's **investor (read-only) password**.
+
+1. Create a MetaApi account and generate an API token. Put it in `.env` as `METAAPI_TOKEN` (and `METAAPI_REGION` if yours is not new-york). Check MetaApi's current pricing and free allowance.
+2. In the app: **Accounts & import → Connect an MT4 account**. Enter the MT login, investor password, broker server name (exactly as in MT4, e.g. `ICMarketsSC-Live01`) and the date to import history from.
+3. The first sync backfills history in 30-day chunks with a progress bar; after that it runs automatically each time you sign in, from **Resync**, and once a day via Vercel Cron (`/api/cron/sync`, set `CRON_SECRET`).
+
+The investor password is sent to MetaApi once and is never stored in this app's database. Syncing is idempotent (trades are keyed on account + MT4 ticket) and never overwrites what you edit in the journal (strategy, rating, tags, reviewed flag, your own stop/target). MT4 partial closes are merged into a single trade with several exits.
+
+Manual entry (**Accounts & import → Add trade manually**) supports multiple fills for scale-in/out.
+
+## Deploy (Vercel + Neon)
+
+1. **Database.** Create a free Neon project. Copy the **pooled** connection string (host contains `-pooler`) for `DATABASE_URL` and the **direct** one for `DIRECT_URL`.
+2. **Create your login once**, from your computer, pointing at Neon (this adds no fake trades):
+   ```bash
+   DATABASE_URL="<direct string>" DIRECT_URL="<direct string>" npx prisma migrate deploy
+   DATABASE_URL="<direct string>" DIRECT_URL="<direct string>" SEED_DEMO=0 SEED_EMAIL="you@example.com" SEED_PASSWORD="a long password" npx prisma db seed
+   ```
+3. **Vercel.** Import this GitHub repository (Framework: Next.js; the `vercel-build` script applies new database migrations on every deploy) and set these environment variables:
+   - `DATABASE_URL`, `DIRECT_URL`: from Neon
+   - `AUTH_SECRET`: 32+ random characters (`openssl rand -hex 32`)
+   - `CRON_SECRET`: any random string (the daily safety-net sync uses it)
+   - `BLOB_READ_WRITE_TOKEN`: create a Vercel Blob store (Storage tab) so screenshots persist
+   - `METAAPI_TOKEN`, `METAAPI_REGION`: only if you use the paid MetaApi option
+4. Open the Vercel URL, sign in, then connect your MT4 on **Accounts & import**. The EA needs your Vercel address added to MT4's WebRequest list (the page shows it).
+
+## Project layout
+
+- `src/lib/metrics` — pure, unit-tested metric definitions (win %, profit factor, expectancy, drawdown, R, performance score)
+- `src/lib/filters` — URL filter state → date ranges / queries
+- `src/components` — design-system pieces (card, KPI tile, pill, drawer, data table, sidebar, filter bar)
+- `src/proxy.ts` — redirects unauthenticated requests to `/login` (Next 16 renamed middleware to proxy)
+- `prisma/seed.ts` — deterministic demo data
+
+## Status
 
 Phases 1 (foundation), 2 (MT4 sync, accounts page, manual add-trade), 3 (dashboard, global and advanced filters, calendar) 4 (Trades views, preview drawer, trade details) 5 (Notebook, Playbooks) 6 (Reports, PDF and CSV export) and 7 (Progress tracker, Trade and Day replay) are complete. Every page in the sidebar is now built.
 
