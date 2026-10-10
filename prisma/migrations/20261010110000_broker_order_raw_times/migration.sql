@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "BrokerOrder" ADD COLUMN     "closeRaw" INTEGER,
+ADD COLUMN     "openRaw" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "BrokerOrder" ALTER COLUMN "openRaw" DROP DEFAULT;

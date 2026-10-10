@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* Design tokens (dark default). A light theme can override these same variables later
+   via :root[data-theme="light"] without touching components. */
+:root {
+  --bg: #0d1015;
+  --sidebar: #11151b;
+  --card: #151a21;
+  --inset: #0f1318;
+  --border: #222934;
+  --border-strong: #2a323e;
+  --nav-active: #1e252f;
+  --text: #e7ecf2;
+  --text-2: #c9d1db;
+  --muted: #9aa4b2;
+  --accent: #e0b04e;
+  --accent-hover: #f2c969;
+  --profit: #3dd39a;
+  --profit-bg: #13261f;
+  --profit-border: #1f5a43;
+  --loss: #f26b6f;
+  --loss-bg: #2a1719;
+  --loss-border: #5e2a2d;
+  --long: #7fb7f0;
+  --long-bg: #1a2c3f;
+  --row-line: #1d232c;
+  --empty-cell: #12161c;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-card: var(--card);
+  --color-inset: var(--inset);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-nav-active: var(--nav-active);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-profit: var(--profit);
+  --color-profit-bg: var(--profit-bg);
+  --color-loss: var(--loss);
+  --color-loss-bg: var(--loss-bg);
+  --color-long: var(--long);
+  --color-long-bg: var(--long-bg);
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --radius-card: 14px;
+  --radius-control: 10px;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* in the base layer so Tailwind utilities (text-bg, text-accent…) can still override link colours */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* Every number, price and P&L is monospaced with tabular figures */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ───────────── note editor (TipTap) ─────────────
+   The page reset removes list markers, indents and heading sizes, so the editor puts its own back. */
+.tiptap > * + * {
+  margin-top: 0.5rem;
+}
+.tiptap p {
+  margin: 0;
+}
+.tiptap > p + p {
+  margin-top: 0.25rem;
+}
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.4rem;
+  margin-top: 0.25rem;
+}
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ul ul {
+  list-style: circle;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+.tiptap li {
+  margin-top: 0.125rem;
+}
+.tiptap li > p {
+  margin: 0;
+}
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 0.9rem;
+}
+.tiptap h1 {
+  font-size: 1.35rem;
+}
+.tiptap h2 {
+  font-size: 1.15rem;
+}
+.tiptap h3 {
+  font-size: 1rem;
+}
+.tiptap blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.85rem;
+  color: var(--muted);
+}
+.tiptap code {
+  font-family: var(--font-mono);
+  background: var(--nav-active);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.9em;
+}
+.tiptap pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  overflow-x: auto;
+}
+.tiptap pre code {
+  background: none;
+  padding: 0;
+}
+.tiptap hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 0.9rem 0;
+}
+.tiptap a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.1rem;
+}
+.tiptap ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+.tiptap ul[data-type="taskList"] > li > label {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  user-select: none;
+}
+.tiptap ul[data-type="taskList"] > li > label input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.tiptap ul[data-type="taskList"] > li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tiptap ul[data-type="taskList"] > li[data-checked="true"] > div {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
