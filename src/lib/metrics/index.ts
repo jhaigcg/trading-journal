@@ -269,6 +269,11 @@ export function performanceScore(input: {
   startingBalance: number;
 }): PerformanceScore {
   const { summary, days, maxDrawdown, startingBalance } = input;
+  // no trades, no score: otherwise "no drawdown" and "no concentration" would award points for doing nothing
+  if (summary.count === 0) {
+    const labels: [ScoreComponent["key"], string][] = [["winPct", "Win %"], ["profitFactor", "Profit factor"], ["avgWinLoss", "Avg win/loss"], ["recoveryFactor", "Recovery factor"], ["maxDrawdown", "Max drawdown"], ["consistency", "Consistency"]];
+    return { score: 0, components: labels.map(([key, label]) => ({ key, label, value: 0 })) };
+  }
   const pf = summary.profitFactor ?? (summary.grossWin > 0 ? Infinity : 0);
   const wl = summary.avgWinLossRatio ?? (summary.avgWin > 0 ? Infinity : 0);
   const rf = recoveryFactor(summary.netPnl, maxDrawdown) ?? (summary.netPnl > 0 ? Infinity : 0);

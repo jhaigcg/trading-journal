@@ -95,16 +95,16 @@ export function WinLossBar({ win, loss, winLabel, lossLabel }: { win: number; lo
 }
 
 /** 0–100 scale with a marker for the performance score. */
-export function ScoreScale({ score }: { score: number }) {
+export function ScoreScale({ score, empty = false }: { score: number; empty?: boolean }) {
   return (
     <div className="mt-3 flex items-center gap-4 border-t border-line pt-3">
       <div className="shrink-0">
         <div className="text-xs text-muted">Your score</div>
-        <div className="num text-2xl font-semibold text-accent">{score}</div>
+        <div className="num text-2xl font-semibold text-accent">{empty ? "—" : score}</div>
       </div>
       <div className="min-w-0 flex-1">
         <div className="relative h-1.5 rounded-full" style={{ background: "linear-gradient(90deg, var(--loss), var(--accent), var(--profit))" }}>
-          <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bg bg-ink" style={{ left: `${Math.min(100, Math.max(0, score))}%` }} />
+          <span hidden={empty} className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bg bg-ink" style={{ left: `${Math.min(100, Math.max(0, score))}%` }} />
         </div>
         <div className="num mt-1 flex justify-between text-[10px] text-muted">
           {[0, 20, 40, 60, 80, 100].map((n) => (

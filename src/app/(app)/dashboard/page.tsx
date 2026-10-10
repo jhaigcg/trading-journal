@@ -157,7 +157,7 @@ async function DashboardBody({ sp, f, timezone }: { sp: Params; f: Filters; time
             }
           />
           <ScoreRadar data={d.score.components.map((c) => ({ label: c.label, value: c.value }))} />
-          <ScoreScale score={d.score.score} />
+          <ScoreScale score={d.score.score} empty={s.count === 0} />
         </Card>
 
         <Card>

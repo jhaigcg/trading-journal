@@ -147,6 +147,12 @@ describe("performance score", () => {
     expect(byKey.maxDrawdown).toBe(Math.round((1 - 0.01 / 0.2) * 100)); // max drawdown 100 on 10k
     expect(res.score).toBe(Math.round(res.components.reduce((a, c) => a + c.value, 0) / 6));
   });
+  it("is zero with no trades, instead of rewarding doing nothing", () => {
+    const res = performanceScore({ summary: summarize([]), days: [], maxDrawdown: 0, startingBalance: 10000 });
+    expect(res.score).toBe(0);
+    expect(res.components.every((c) => c.value === 0)).toBe(true);
+    expect(res.components).toHaveLength(6);
+  });
   it("is 0..100 for degenerate input", () => {
     const res = performanceScore({ summary: summarize([]), days: [], maxDrawdown: 0, startingBalance: 0 });
     expect(res.score).toBeGreaterThanOrEqual(0);
