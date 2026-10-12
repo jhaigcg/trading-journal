@@ -144,6 +144,13 @@ export default async function AccountsPage() {
           <p className="mt-2 text-sm text-ink-2">
             A small read-only program that runs inside your MT4 and sends your trades here. It never places or changes orders, and it needs no password: just a token that only works for this account.
           </p>
+          <p className="mt-2 text-sm text-ink-2">
+            Already connected, or updating the EA?{" "}
+            <a href="/api/ea/download" className="text-accent underline">
+              Download LedgerSync.mq4
+            </a>{" "}
+            (it has this site&rsquo;s address built in; your existing token still works).
+          </p>
           <div className="mt-4">
             <ConnectEaForm knownServers={knownServers} />
           </div>
