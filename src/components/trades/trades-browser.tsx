@@ -63,6 +63,7 @@ const COLUMNS: Col[] = [
   },
 ];
 
+const MOBILE_SORTS: [string, string][] = [["openedAt", "Open date"], ["closedAt", "Close date"], ["netPnl", "Net P&L"], ["symbol", "Symbol"], ["quantity", "Lots"]];
 const DEFAULT_COLS = ["open", "symbol", "status", "close", "entry", "exit", "net", "roi", "insights", "scale"];
 const STORE = "ledger.trades.columns";
 
@@ -171,7 +172,7 @@ export function TradesBrowser({
     <div>
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-xs text-muted">{message ?? ""}</span>
-        <div className="relative" ref={pickerRef}>
+        <div className="relative hidden md:block" ref={pickerRef}>
           <button type="button" onClick={() => setPicker((p) => !p)} aria-expanded={picker} className="inline-flex min-h-9 items-center gap-2 rounded-control border border-line-strong bg-card px-3 text-xs hover:bg-nav-active">
             <Columns3 size={14} /> Columns
           </button>
@@ -248,7 +249,57 @@ export function TradesBrowser({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-card">
+      {/* phones: one card per trade, with the result up front (the full table needs sideways scrolling) */}
+      <div className="md:hidden">
+        <div className="mb-2 flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2">
+            Sort by
+            <select value={sort} onChange={(e) => router.push(sortHref[e.target.value])} className="min-h-9 rounded-control border border-line-strong bg-card px-2 text-[13px] text-ink">
+              {MOBILE_SORTS.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Link href={sortHref[sort]} className="inline-flex min-h-9 items-center rounded-control border border-line-strong px-3 text-[13px] text-ink">
+            {dir === "asc" ? "Oldest / lowest first ↑" : "Newest / highest first ↓"}
+          </Link>
+        </div>
+        {rows.length === 0 && <p className="rounded-card border border-line bg-card px-3 py-10 text-center text-sm text-muted">No trades match these filters.</p>}
+        <ul className="flex flex-col gap-2">
+          {rows.map((r) => (
+            <li key={r.id}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => !(e.target as HTMLElement).closest("input,a,button") && openPreview(r.id)}
+                onKeyDown={(e) => e.key === "Enter" && openPreview(r.id)}
+                className={cn("flex items-center gap-3 rounded-card border border-line bg-card p-3 active:bg-nav-active", selected.has(r.id) && "border-accent/50 bg-accent/5")}
+              >
+                <input type="checkbox" aria-label={`Select ${r.symbol} trade`} checked={selected.has(r.id)} onChange={() => toggle(r.id)} className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-semibold">{r.symbol}</span>
+                    <SidePill side={r.side} />
+                    {r.status === "OPEN" ? <Pill className="bg-long-bg text-long">OPEN</Pill> : r.result ? <ResultPill result={r.result === "BREAKEVEN" ? "BE" : r.result} /> : null}
+                  </div>
+                  <div className="num mt-1 text-xs text-muted">{fmtDateTime(r.openedAt, options.timezone)}</div>
+                  <div className="mt-0.5 truncate text-xs text-ink-2">
+                    {r.quantity} lots{r.strategy ? ` · ${r.strategy}` : ""}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <Pnl value={r.netPnl} currency={currency} className="text-base font-semibold" />
+                  <div className="num mt-0.5 text-xs text-muted">{r.netRoi == null ? "" : `${r.netRoi.toFixed(2)}%`}</div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-card border border-line bg-card md:block">
         <table className="w-full min-w-[820px] border-collapse text-[13px]">
           <thead>
             <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-muted">

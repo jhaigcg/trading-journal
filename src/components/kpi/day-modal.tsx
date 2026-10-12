@@ -94,7 +94,33 @@ export function DayModal({ detail, tz, closeHref, detailsHref }: { detail: DayDe
             </div>
           </div>
 
-          <div className="mt-5 overflow-x-auto rounded-control border border-line">
+          {/* phones: a card per trade instead of a table that needs sideways scrolling */}
+          <ul className="mt-5 flex flex-col gap-2 sm:hidden">
+            {detail.trades.map((t) => (
+              <li key={t.id}>
+                <div role="button" tabIndex={0} onClick={() => router.push(`/trades/${t.id}`)} onKeyDown={(e) => e.key === "Enter" && router.push(`/trades/${t.id}`)} className="flex items-center gap-3 rounded-control border border-line p-3 active:bg-nav-active">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="num text-sm font-semibold">{clock(t.openedAt, tz)}</span>
+                      <span className="rounded-full bg-nav-active px-2 py-0.5 text-xs">{t.symbol}</span>
+                      <span className="text-xs text-ink-2">{t.side === "LONG" ? "Long" : "Short"}</span>
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-muted">
+                      {t.realizedR == null ? "" : `${t.realizedR.toFixed(2)}R`}
+                      {t.realizedR != null && t.strategy ? " · " : ""}
+                      {t.strategy ?? ""}
+                    </div>
+                  </div>
+                  <div className={cn("num shrink-0 text-right text-[15px] font-semibold", TONE[pnlTone(t.netPnl)])}>{money(t.netPnl, cur)}</div>
+                  <Link href={`/replay?trade=${t.id}`} onClick={(e) => e.stopPropagation()} aria-label={`Replay the ${clock(t.openedAt, tz)} ${t.symbol} trade`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-accent hover:bg-line">
+                    <Play size={15} aria-hidden fill="currentColor" />
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-5 hidden overflow-x-auto rounded-control border border-line sm:block">
             <table className="w-full min-w-[600px] border-collapse text-[13px]">
               <thead>
                 <tr className="bg-inset text-left text-[11px] uppercase tracking-wide text-muted">

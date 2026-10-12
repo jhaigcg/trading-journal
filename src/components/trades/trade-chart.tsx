@@ -83,6 +83,7 @@ export function TradeChart({
   const [tf, setTf] = useState<Timeframe>(defaultTf);
   const [attempt, setAttempt] = useState(0);
   const [zones, setZones] = useState(true);
+  const [toolsOpen, setToolsOpen] = useState(false); // phones: the drawing tools stay folded away until asked for
   const zonesRef = useRef(true);
   const boxRef = useRef<PositionBox | null>(null);
 
@@ -407,12 +408,19 @@ export function TradeChart({
         ))}
         <label className="ml-auto flex min-h-8 cursor-pointer items-center gap-1.5 text-xs text-muted">
           <input type="checkbox" checked={zones} onChange={(e) => setZones(e.target.checked)} className="accent-[var(--accent)]" />
-          Show entry to exit box
+          <span className="hidden sm:inline">Show entry to exit box</span>
+          <span className="sm:hidden">Trade box</span>
         </label>
+        {editable && (
+          <button type="button" aria-expanded={toolsOpen} onClick={() => setToolsOpen((o) => !o)} className="inline-flex min-h-8 items-center rounded-md border border-line-strong px-2.5 text-xs text-ink-2 md:hidden">
+            {toolsOpen ? "Hide tools" : "Draw & indicators"}
+          </button>
+        )}
         {state === "loading" && <span className="ml-2 text-xs text-muted">Loading prices…</span>}
       </div>
 
       {editable && (
+        <div className={cn(!toolsOpen && "hidden md:block")}>
         <ChartToolbar
           tool={tool}
           onTool={setTool}
@@ -426,6 +434,7 @@ export function TradeChart({
           onIndicator={toggleIndicator}
           saveState={saveState}
         />
+        </div>
       )}
 
       <div className={cn("relative rounded-control border border-line bg-inset", editable && tool !== "cursor" && "cursor-crosshair")} style={{ height }}>

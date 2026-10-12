@@ -95,7 +95,7 @@ export default async function TradeDetailPage({ params, searchParams }: { params
             {t.holdSeconds != null && ` · held ${duration(t.holdSeconds)}`} · {t.accountName}
           </p>
         </div>
-        <div className="text-right">
+        <div className="sm:text-right">
           <div className="text-xs text-muted">Net P&amp;L</div>
           <Pnl value={t.netPnl} currency={t.currency} className="text-[28px] font-semibold" />
         </div>
@@ -123,7 +123,7 @@ export default async function TradeDetailPage({ params, searchParams }: { params
           />
         </Card>
 
-        <div className="flex min-w-0 flex-col gap-4 self-start">
+        <div className="order-first flex min-w-0 flex-col gap-4 self-start lg:order-none">
           <Card>
             <TradeChart src={`/api/trades/${t.id}/chart`} defaultTf="M15" height={470} tzOffsetMin={off} tradeId={t.id} initialDrawings={await loadDrawings(t.id)} />
           </Card>

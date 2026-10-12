@@ -54,7 +54,7 @@ export function PnlCalendar({
           <Link
             href={hrefFor(null)}
             aria-disabled={month === currentMonth}
-            className={cn("ml-2 flex min-h-9 items-center rounded-control border border-line-strong px-3 text-xs hover:bg-nav-active", month === currentMonth && "pointer-events-none opacity-50")}
+            className={cn("ml-2 flex min-h-9 items-center whitespace-nowrap rounded-control border border-line-strong px-3 text-xs hover:bg-nav-active", month === currentMonth && "pointer-events-none opacity-50")}
           >
             This month
           </Link>
@@ -67,21 +67,21 @@ export function PnlCalendar({
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <div className="min-w-[560px]">
-          <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.1fr)] gap-1.5 text-center text-[11px] text-muted">
+        <div className="sm:min-w-[560px]">
+          <div className="grid grid-cols-7 sm:grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.1fr)] gap-1.5 text-center text-[11px] text-muted">
             {DOW.map((d) => (
               <span key={d} className="rounded-lg border border-line py-1.5 font-semibold text-ink-2">
                 {d}
               </span>
             ))}
-            <span className="rounded-lg border border-line py-1.5 font-semibold text-ink-2">Week</span>
+            <span className="hidden rounded-lg border border-line py-1.5 font-semibold text-ink-2 sm:block">Week</span>
           </div>
 
           <div className="mt-1.5 flex flex-col gap-1.5">
             {weeks.map((w, wi) => (
-              <div key={wi} className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.1fr)] gap-1.5">
+              <div key={wi} className="grid grid-cols-7 sm:grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.1fr)] gap-1.5">
                 {w.cells.map((c, ci) => {
-                  if (!c.date) return <div key={ci} className="min-h-[72px] rounded-lg border border-[var(--row-line)] bg-[var(--empty-cell)]" />;
+                  if (!c.date) return <div key={ci} className="min-h-[54px] sm:min-h-[72px] rounded-lg border border-[var(--row-line)] bg-[var(--empty-cell)]" />;
                   const traded = c.netPnl !== null;
                   const win = traded && c.netPnl! > 0;
                   const loss = traded && c.netPnl! < 0;
@@ -96,8 +96,8 @@ export function PnlCalendar({
                       </span>
                       {traded && (
                         <span className="mt-auto flex flex-col items-end">
-                          <span className={cn("num text-[13px] font-semibold", win && "text-profit", loss && "text-loss")}>{compactMoney(c.netPnl!, sym)}</span>
-                          <span className="text-[10px] text-muted">
+                          <span className={cn("num text-[11px] font-semibold sm:text-[13px]", win && "text-profit", loss && "text-loss")}>{compactMoney(c.netPnl!, sym)}</span>
+                          <span className="hidden text-[10px] text-muted sm:block">
                             {c.trades} {c.trades === 1 ? "trade" : "trades"}
                           </span>
                         </span>
@@ -105,7 +105,7 @@ export function PnlCalendar({
                     </>
                   );
                   const cls = cn(
-                    "flex min-h-[72px] flex-col rounded-lg border p-1.5",
+                    "flex min-h-[54px] flex-col rounded-lg border p-1 sm:min-h-[72px] sm:p-1.5",
                     win && "border-[var(--profit-border)] bg-profit-bg",
                     loss && "border-[var(--loss-border)] bg-loss-bg",
                     traded && !win && !loss && "border-line-strong bg-card",
@@ -122,7 +122,7 @@ export function PnlCalendar({
                     </div>
                   );
                 })}
-                <div className="flex min-h-[72px] flex-col justify-between rounded-lg border border-line bg-inset p-1.5 text-right">
+                <div className="hidden min-h-[72px] flex-col justify-between rounded-lg border border-line bg-inset p-1.5 text-right sm:flex">
                   <span className="text-[10px] text-muted">W{wi + 1}</span>
                   {w.tradingDays > 0 && (
                     <span className="flex flex-col items-end">

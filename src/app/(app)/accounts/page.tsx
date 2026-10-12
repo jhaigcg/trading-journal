@@ -48,8 +48,8 @@ export default async function AccountsPage() {
             <p className="py-8 text-center text-sm text-muted">No accounts yet. Connect your MT4 account below.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-[13px]">
-                <thead>
+              <table className="w-full border-collapse text-[13px] max-md:block md:min-w-[760px]">
+                <thead className="max-md:hidden">
                   <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-muted">
                     <th className="px-3 py-2.5 font-medium">Account</th>
                     <th className="px-3 py-2.5 font-medium">Platform</th>
@@ -59,7 +59,7 @@ export default async function AccountsPage() {
                     <th className="px-3 py-2.5" />
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="max-md:block">
                   {accounts.map((a) => {
                     const viaEa = a.syncType === "AUTO_EA";
                     const viaMeta = !!a.metaapiAccountId;
@@ -67,20 +67,20 @@ export default async function AccountsPage() {
                     const expected = brokerOffsetMinutesAt(now, a.brokerTimeMode);
                     const clockMismatch = viaEa && online && a.lastReportedOffsetMin != null && a.lastReportedOffsetMin !== expected;
                     return (
-                      <tr key={a.id} className="border-b border-[var(--row-line)] align-top">
-                        <td className="px-3 py-3">
+                      <tr key={a.id} className="border-b border-[var(--row-line)] align-top max-md:mb-3 max-md:block max-md:rounded-card max-md:border max-md:border-line max-md:p-3">
+                        <td className="px-3 py-3 max-md:block max-md:px-0 max-md:py-1">
                           <div className="font-semibold">{a.name}</div>
                           <div className="text-xs text-muted">{a.broker ?? "—"}</div>
                         </td>
-                        <td className="px-3 py-3">
+                        <td data-label="Platform" className="px-3 py-3 max-md:block max-md:px-0 max-md:py-1.5 max-md:before:mb-0.5 max-md:before:block max-md:before:text-[11px] max-md:before:uppercase max-md:before:tracking-wide max-md:before:text-muted max-md:before:content-[attr(data-label)]">
                           <div>{a.platform}</div>
                           <div className="num text-xs text-muted">{a.mtLogin ? `${a.mtLogin}${a.mtServer ? ` @ ${a.mtServer}` : ""}` : "manual"}</div>
                         </td>
-                        <td className="num px-3 py-3 text-right">{a.lastBalance != null ? money(Number(a.lastBalance), a.currency, { signed: false }) : "—"}</td>
-                        <td className="num px-3 py-3 text-right">{tradeCount.get(a.id) ?? 0}</td>
-                        <td className="px-3 py-3">
+                        <td data-label="Balance" className="num px-3 py-3 text-right max-md:flex max-md:items-baseline max-md:justify-between max-md:px-0 max-md:py-1.5 max-md:text-left max-md:before:text-[11px] max-md:before:uppercase max-md:before:tracking-wide max-md:before:text-muted max-md:before:content-[attr(data-label)]">{a.lastBalance != null ? money(Number(a.lastBalance), a.currency, { signed: false }) : "—"}</td>
+                        <td data-label="Trades" className="num px-3 py-3 text-right max-md:flex max-md:items-baseline max-md:justify-between max-md:px-0 max-md:py-1.5 max-md:text-left max-md:before:text-[11px] max-md:before:uppercase max-md:before:tracking-wide max-md:before:text-muted max-md:before:content-[attr(data-label)]">{tradeCount.get(a.id) ?? 0}</td>
+                        <td data-label="Sync" className="px-3 py-3 max-md:block max-md:px-0 max-md:py-1.5 max-md:before:mb-0.5 max-md:before:block max-md:before:text-[11px] max-md:before:uppercase max-md:before:tracking-wide max-md:before:text-muted max-md:before:content-[attr(data-label)]">
                           {viaEa ? (
-                            <div className="flex max-w-[300px] flex-col gap-1.5">
+                            <div className="flex flex-col gap-1.5 md:max-w-[300px]">
                               <div>
                                 {a.lastSyncError ? (
                                   <Pill className="bg-loss-bg text-loss">SYNC ERROR</Pill>
@@ -122,8 +122,8 @@ export default async function AccountsPage() {
                             <Pill className="bg-line text-muted">NOT SYNCED YET</Pill>
                           )}
                         </td>
-                        <td className="px-3 py-3">
-                          <div className="flex flex-wrap items-start justify-end gap-1">
+                        <td className="px-3 py-3 max-md:block max-md:px-0 max-md:pb-0 max-md:pt-2">
+                          <div className="flex flex-wrap items-start justify-end gap-1 max-md:justify-start">
                             {viaMeta && <ResyncButton accountIds={[a.id]} variant="button" />}
                             {viaEa && <RegenerateToken accountId={a.id} />}
                             {(viaMeta || viaEa) && <DisconnectButton accountId={a.id} />}
