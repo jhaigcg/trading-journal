@@ -60,7 +60,8 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    EventKillTimer();
-   Comment("");
+   ObjectsDeleteAll(0, "LedgerSync_ui_");
+   ChartRedraw();
   }
 
 void OnTick() { }   // all work happens on the timer so it also runs on weekends
@@ -314,12 +315,36 @@ bool Post(string body)
    return(false);
   }
 
+// One line of text in the bottom-left corner of the chart. These are the EA's own chart objects, so they never
+// clash with other indicators that use MT4's single Comment() slot (which would wipe this status out).
+void UiLine(const int row, const string text, const color clr)
+  {
+   string name = "LedgerSync_ui_" + IntegerToString(row);
+   if(ObjectFind(0, name) < 0)
+     {
+      ObjectCreate(0, name, OBJ_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_LOWER);
+      ObjectSetInteger(0, name, OBJPROP_ANCHOR, ANCHOR_LEFT_LOWER);
+      ObjectSetInteger(0, name, OBJPROP_XDISTANCE, 10);
+      ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 9);
+      ObjectSetString(0, name, OBJPROP_FONT, "Arial");
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+     }
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, 8 + row * 16);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+  }
+
 void ShowStatus()
   {
    string last = (gLastOk > 0) ? TimeToString(gLastOk, TIME_DATE | TIME_SECONDS) : "never";
-   Comment("LedgerSync  v1.00\n",
-           "Account: ", AccountNumber(), "  ", AccountServer(), "\n",
-           "Status: ", gStatus, "\n",
-           "Last successful send: ", last);
+   bool bad = (StringFind(gStatus, "error") >= 0 || StringFind(gStatus, "BLOCKED") >= 0 || StringFind(gStatus, "REJECTED") >= 0 || StringFind(gStatus, "not connected") >= 0);
+   // row 0 is the bottom line, higher rows stack upwards
+   UiLine(3, "LedgerSync v1.01", clrSilver);
+   UiLine(2, "Account: " + IntegerToString(AccountNumber()) + "  " + AccountServer(), clrSilver);
+   UiLine(1, "Status: " + gStatus, bad ? clrTomato : clrLimeGreen);
+   UiLine(0, "Last successful send: " + last, clrSilver);
+   ChartRedraw();
   }
 //+------------------------------------------------------------------+
