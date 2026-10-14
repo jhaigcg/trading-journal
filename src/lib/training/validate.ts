@@ -46,6 +46,8 @@ export const attemptSchema = z.object({
   tf: z.string().optional(),
   /** live mode: open time (unix seconds) of the candle the order was placed on */
   entryT: z.coerce.number().int().positive().optional(),
+  /** live mode: "limit" rests at `entry` from the moment `entryT` closes until price touches it; "market" (default) fills at that candle's close */
+  orderType: z.enum(["market", "limit"]).optional(),
 });
 export type AttemptInput = z.infer<typeof attemptSchema>;
 

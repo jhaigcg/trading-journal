@@ -6,7 +6,7 @@ import { getTickCandles } from "@/lib/market-data/ticks";
 import { TF_SECONDS, type Candle, type Timeframe } from "@/lib/market-data/types";
 import { fileUrl } from "@/lib/queries/trade-detail";
 import { matchScore, type Expert, type Match } from "./match";
-import { simulate, validateOrder, type Order, type SimResult } from "./sim";
+import { limitProblem, simulate, validateOrder, type Order, type SimResult } from "./sim";
 import { attemptSchema, firstError, tfsFor, type AttemptInput } from "./validate";
 
 type Scenario = NonNullable<Awaited<ReturnType<typeof db.trainingScenario.findUnique>>>;
@@ -98,10 +98,21 @@ export async function submitAttempt(id: string, raw: unknown): Promise<Loaded<At
     if (a.entryT == null) return fail(400, "No entry time was sent.");
     if (a.entryT < decisionT || a.entryT >= endT) return fail(400, "The order was placed outside the replay window.");
     const sec = await getTickCandles(s.symbol, decisionT, endT);
-    judge = sec.candles.filter((c) => c.t >= a.entryT!);
-    if (!judge.length || judge[0].t !== a.entryT) return fail(422, "That entry moment has no price data. Try the scenario again.");
-    order = { side: a.side, entry: judge[0].c, stopLoss: a.stopLoss, takeProfit: a.takeProfit }; // filled at the close of the candle it was placed on
-    mode = "market";
+    const placed = sec.candles.find((c) => c.t === a.entryT);
+    if (!placed) return fail(422, "That entry moment has no price data. Try the scenario again.");
+    if (a.orderType === "limit") {
+      // placed at the close of its candle, it can only fill on the candles after
+      const wrong = limitProblem(a.side, a.entry, placed.c);
+      if (wrong) return fail(400, wrong);
+      judge = sec.candles.filter((c) => c.t > a.entryT!);
+      if (!judge.length) return fail(422, "The replay ended before the order could fill.");
+      order = { side: a.side, entry: a.entry, stopLoss: a.stopLoss, takeProfit: a.takeProfit };
+      mode = "touch";
+    } else {
+      judge = sec.candles.filter((c) => c.t >= a.entryT!);
+      order = { side: a.side, entry: placed.c, stopLoss: a.stopLoss, takeProfit: a.takeProfit }; // filled at the close of the candle it was placed on
+      mode = "market";
+    }
     entryAt = new Date(a.entryT * 1000);
   } else {
     order = { side: a.side, entry: a.entry, stopLoss: a.stopLoss, takeProfit: a.takeProfit };

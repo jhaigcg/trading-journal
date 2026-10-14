@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Candle } from "@/lib/market-data/types";
 import { expertOrder, matchScore, validateExpert, type Expert } from "@/lib/training/match";
-import { exitIn, rMultiple, rrOf, simulate, validateOrder, type Order } from "@/lib/training/sim";
+import { exitIn, limitProblem, rMultiple, rrOf, simulate, validateOrder, type Order } from "@/lib/training/sim";
 
 const bar = (t: number, o: number, h: number, l: number, c: number): Candle => ({ t, o, h, l, c, v: 1 });
 const short: Order = { side: "SHORT", entry: 100, stopLoss: 102, takeProfit: 94 }; // risk 2, reward 6: 1:3
@@ -85,6 +85,25 @@ describe("simulate (market order, live)", () => {
   });
   it("a market order does not wait for the entry price to be touched", () => {
     expect(simulate(long, [bar(0, 150, 150, 150, 150), bar(5, 150, 151, 149, 150)], "market").filled).toBe(true);
+  });
+});
+
+describe("limit orders placed in live replay", () => {
+  it("a buy limit must sit below the price now, a sell limit above", () => {
+    expect(limitProblem("LONG", 99, 100)).toBeNull();
+    expect(limitProblem("LONG", 100, 100)).toMatch(/below/);
+    expect(limitProblem("LONG", 101, 100)).toMatch(/below/);
+    expect(limitProblem("SHORT", 101, 100)).toBeNull();
+    expect(limitProblem("SHORT", 99, 100)).toMatch(/above/);
+    expect(limitProblem("SHORT", NaN, 100)).toMatch(/limit price/);
+  });
+  it("waits for the pullback, then fills and runs to the target", () => {
+    const after = [bar(5, 100.5, 101, 100.2, 100.8), bar(10, 100.8, 101, 99.9, 100), bar(15, 100, 103, 99.5, 102), bar(20, 102, 107, 101.5, 106)];
+    expect(simulate(long, after, "touch")).toMatchObject({ filled: true, fillT: 10, outcome: "TP", exitT: 20, r: 3 });
+  });
+  it("never fills if price does not come back; the order is just left unfilled", () => {
+    const run = [bar(5, 101, 103, 100.5, 102), bar(10, 102, 105, 101.5, 104)];
+    expect(simulate(long, run, "touch")).toMatchObject({ filled: false, outcome: "NO_FILL", r: null });
   });
 });
 

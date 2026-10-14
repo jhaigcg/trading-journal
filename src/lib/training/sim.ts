@@ -24,7 +24,18 @@ export function validateOrder(o: Order): string | null {
   return null;
 }
 
-export const riskOf = (o: Order) => Math.abs(o.entry - o.stopLoss);
+/**
+ * A limit order rests until price comes back to it, so a buy limit must sit below the price now and a sell limit above;
+ * on the other side it would fill at once (that is a stop or market order). Null when the price is on the right side.
+ */
+export function limitProblem(side: Side, limit: number, price: number): string | null {
+  if (!Number.isFinite(limit) || limit <= 0) return "Enter the limit price.";
+  if (side === "LONG" && !(limit < price)) return `A buy limit must be below the current price (${price.toFixed(2)}), where it waits for a pullback.`;
+  if (side === "SHORT" && !(limit > price)) return `A sell limit must be above the current price (${price.toFixed(2)}), where it waits for a pullback.`;
+  return null;
+}
+
+export const riskOf =(o: Order) => Math.abs(o.entry - o.stopLoss);
 export const rewardOf = (o: Order) => Math.abs(o.takeProfit - o.entry);
 export const rrOf = (o: Order) => (riskOf(o) > 0 ? rewardOf(o) / riskOf(o) : 0);
 const dir = (s: Side) => (s === "LONG" ? 1 : -1);
