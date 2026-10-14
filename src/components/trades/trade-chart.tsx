@@ -10,7 +10,7 @@ import { TF_LABEL, TF_SECONDS, TIMEFRAMES, type Timeframe } from "@/lib/market-d
 import type { ChartData } from "@/lib/queries/trade-chart";
 import { ChartToolbar, toolHint, type Tool } from "./chart-toolbar";
 import { DrawingsLayer } from "./drawings-layer";
-import { computeZones, zonesAvailable, type ZoneChoice } from "@/lib/smc";
+import { computeZones, NO_OVERLAYS, ZONES_ON, zonesAvailable, type ZoneChoice } from "@/lib/smc";
 import { PositionBox } from "./position-box";
 import { ZonesLayer } from "./zones-layer";
 import { ZoneToggles } from "./zone-toggles";
@@ -90,7 +90,7 @@ export function TradeChart({
   const zonesRef = useRef(true);
   const boxRef = useRef<PositionBox | null>(null);
   const zoneLayer = useRef<ZonesLayer | null>(null);
-  const [zoneChoice, setZoneChoice] = useState<ZoneChoice>({ fvg: true, ob: true });
+  const [zoneChoice, setZoneChoice] = useState<ZoneChoice>(ZONES_ON);
 
   // drawing state: React state for the UI, refs for the chart's event handlers
   const [tool, setToolState] = useState<Tool>("cursor");
@@ -316,7 +316,7 @@ export function TradeChart({
 
   // fair value gaps and order blocks, found from the candles on the 5 and 15 minute charts
   useEffect(() => {
-    zoneLayer.current?.set(data && zonesAvailable(tf) ? computeZones(data.candles, zoneChoice) : []);
+    zoneLayer.current?.set(data && zonesAvailable(tf) ? computeZones(data.candles, zoneChoice) : NO_OVERLAYS);
   }, [data, tf, zoneChoice, tzOffsetMin]);
 
   // keep the drawings layer in step with state

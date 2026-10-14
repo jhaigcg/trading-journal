@@ -27,13 +27,10 @@ type Row = Awaited<ReturnType<typeof listScenarios>>[number];
 
 function Section({ title, blurb, kind, scenarios: list, tz }: { title: string; blurb: string; kind: "SETUP" | "EVENT"; scenarios: Row[]; tz: string }) {
   return (
-    <section aria-label={title} className="mb-8">
+    <section id="training-panel" role="tabpanel" aria-label={title} className="mb-8">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold">
-            {title} <span className="num text-sm font-normal text-muted">{list.length}</span>
-          </h2>
-          <p className="mt-0.5 max-w-[640px] text-xs text-muted">{blurb}</p>
+          <p className="max-w-[640px] text-xs text-muted">{blurb}</p>
         </div>
         <Link href={`/training/new?kind=${kind}`} className="inline-flex min-h-9 items-center rounded-control border border-line-strong px-3 text-[13px] hover:bg-nav-active">
           + Add {kind === "EVENT" ? "news event" : "price action"} scenario
@@ -78,10 +75,12 @@ function Section({ title, blurb, kind, scenarios: list, tz }: { title: string; b
   );
 }
 
-export default async function TrainingPage() {
+export default async function TrainingPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const tab: "SETUP" | "EVENT" = (await searchParams).tab === "events" ? "EVENT" : "SETUP";
   const { tz } = await settingsFor();
   const [scenarios, stats] = await Promise.all([listScenarios(), trainingStats(tz)]);
-  const nextUp = scenarios.find((s) => s.attempts === 0) ?? [...scenarios].sort((a, b) => (a.bestMatch ?? 101) - (b.bestMatch ?? 101))[0];
+  const shown = scenarios.filter((s) => s.kind === tab);
+  const nextUp = shown.find((s) => s.attempts === 0) ?? [...shown].sort((a, b) => (a.bestMatch ?? 101) - (b.bestMatch ?? 101))[0];
 
   return (
     <>
@@ -135,8 +134,31 @@ export default async function TrainingPage() {
             </Card>
           )}
 
-          <Section title="Price action" blurb="Normal market conditions, no scheduled news. Mark your entry, stop loss and take profit on the chart." kind="SETUP" scenarios={scenarios.filter((s) => s.kind === "SETUP")} tz={tz} />
-          <Section title="News events" blurb="NFP, CPI and other high-impact releases. Replay the 5-second chart live and trade the break, usually with a limit order on the pullback." kind="EVENT" scenarios={scenarios.filter((s) => s.kind === "EVENT")} tz={tz} />
+          <div role="tablist" aria-label="Kind of training" className="mb-4 flex gap-1 border-b border-line">
+            {(
+              [
+                ["SETUP", "Price action", "price-action"],
+                ["EVENT", "News events", "events"],
+              ] as const
+            ).map(([kind, label, slug]) => (
+              <Link
+                key={kind}
+                href={`/training?tab=${slug}`}
+                role="tab"
+                aria-selected={tab === kind}
+                aria-controls="training-panel"
+                scroll={false}
+                className={cn("-mb-px min-h-11 border-b-2 px-4 py-2.5 text-sm", tab === kind ? "border-accent font-semibold text-ink" : "border-transparent text-muted hover:text-ink")}
+              >
+                {label} <span className="num ml-1 text-xs text-muted">{scenarios.filter((s) => s.kind === kind).length}</span>
+              </Link>
+            ))}
+          </div>
+          {tab === "SETUP" ? (
+            <Section title="Price action" blurb="Normal market conditions, no NFP or CPI. Mark your entry, stop loss and take profit on the chart (5m, 15m and 1m, with the FVG, OB and structure switches)." kind="SETUP" scenarios={shown} tz={tz} />
+          ) : (
+            <Section title="News events" blurb="Price action around NFP, CPI and other high-impact releases. Replay the 5-second chart live and trade the break, usually with a limit order on the pullback." kind="EVENT" scenarios={shown} tz={tz} />
+          )}
         </>
       )}
     </>

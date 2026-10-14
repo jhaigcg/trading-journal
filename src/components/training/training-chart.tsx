@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { PositionBox, type PositionBoxInput } from "@/components/trades/position-box";
 import type { Candle } from "@/lib/market-data/types";
 import { ZonesLayer } from "@/components/trades/zones-layer";
-import { computeZones, type ZoneChoice } from "@/lib/smc";
+import { computeZones, NO_OVERLAYS, type ZoneChoice } from "@/lib/smc";
 import { TrainingLayer, type Band } from "./primitives";
 
 const C = { text: "#9AA4B2", grid: "#1D232C", border: "#222934", up: "#3DD39A", down: "#F26B6F" };
@@ -147,7 +147,7 @@ export function TrainingChart({
 
   // fair value gaps and order blocks
   useEffect(() => {
-    live.current?.zoneLayer.set(zones ? computeZones(candles, zones) : []);
+    live.current?.zoneLayer.set(zones ? computeZones(candles, zones) : NO_OVERLAYS);
   }, [zones, candles, shift]);
 
   // the trade box

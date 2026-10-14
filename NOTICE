@@ -1,0 +1,28 @@
+Ledger. third-party notices
+
+src/lib/lux-smc.ts (and its tests in tests/chart/lux-smc.test.ts)
+------------------------------------------------------------------
+A TypeScript port of two open-source Pine Script indicators:
+
+  - "Smart Money Concepts [LuxAlgo]"
+  - "Fair Value Gap [LuxAlgo]"
+
+Original work (c) LuxAlgo, published on TradingView under the
+Attribution-NonCommercial-ShareAlike 4.0 International licence
+(CC BY-NC-SA 4.0): https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+The port was written for personal, non-commercial use and is a derivative of
+those indicators. Under that licence:
+
+  - Attribution: credit to LuxAlgo is kept in the header of the file.
+  - NonCommercial: these files may not be used for commercial purposes.
+  - ShareAlike: any copy or adaptation of these files must be shared under the
+    same CC BY-NC-SA 4.0 licence.
+
+Changes from the originals: rewritten in TypeScript to run on closed candles
+from a database rather than on TradingView's chart; the candle colouring,
+multi-timeframe levels, premium / discount zones, alerts and dashboard were
+not ported.
+
+The rest of this repository is the author's own work and is not covered by
+this notice.

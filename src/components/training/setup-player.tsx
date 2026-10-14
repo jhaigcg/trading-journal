@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { rrOf, validateOrder, type Order } from "@/lib/training/sim";
 import type { Answer, AttemptResult, Question } from "@/lib/training/service";
 import { ZoneToggles } from "@/components/trades/zone-toggles";
-import { zonesAvailable, type ZoneChoice } from "@/lib/smc";
+import { ZONES_OFF, zonesAvailable, type ZoneChoice } from "@/lib/smc";
 import { TrainingChart, type ChartLine, type TradeBox } from "./training-chart";
 import { ResultPanel } from "./result-panel";
 import { clockText, postJson, useApi } from "./use-api";
@@ -30,7 +30,7 @@ const STEPS: { id: Field; label: string; color: string }[] = [
 export function SetupPlayer({ id, tzOffsetMin, nextHref }: { id: string; tzOffsetMin: number; nextHref: string | null }) {
   const [tf, setTf] = useState<string | null>(null);
   const [round, setRound] = useState(0);
-  const [zoneChoice, setZoneChoice] = useState<ZoneChoice>({ fvg: false, ob: false }); // off by default: they would give away part of the exercise
+  const [zoneChoice, setZoneChoice] = useState<ZoneChoice>(ZONES_OFF); // off by default: they would give away part of the exercise
   const { data: q, error, loading } = useApi<Question>(`/api/training/${id}/question${tf ? `?tf=${tf}` : ""}`, round);
 
   const [side, setSide] = useState<"LONG" | "SHORT">("LONG");
