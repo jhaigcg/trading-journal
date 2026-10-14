@@ -11,7 +11,7 @@ import { periodRange } from "./periods";
  */
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
-const BASE = "https://datafeed.dukascopy.com/datafeed";
+export const BASE = "https://datafeed.dukascopy.com/datafeed";
 
 interface Instrument {
   code: string;

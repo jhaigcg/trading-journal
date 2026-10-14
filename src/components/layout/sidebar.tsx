@@ -12,6 +12,7 @@ const NAV = [
   { label: "Reports", href: "/reports" },
   { label: "Playbooks", href: "/playbooks" },
   { label: "Replay", href: "/replay" },
+  { label: "Training", href: "/training" },
   { label: "Progress", href: "/progress" },
   { label: "Accounts & import", href: "/accounts" },
   { label: "Settings", href: "/settings" },

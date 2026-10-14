@@ -4,9 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url       = env("DATABASE_URL")   // pooled (Neon pooler) for the app
-  directUrl = env("DIRECT_URL")     // direct connection for migrations
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (Neon pooler) for the app
+  directUrl = env("DIRECT_URL") // direct connection for migrations
 }
 
 // ───────────── Enums ─────────────
@@ -15,36 +15,43 @@ enum Platform {
   MT5
   MANUAL
 }
+
 enum SyncType {
   MANUAL
   FILE_IMPORT
   AUTO_METAAPI
   AUTO_EA
 }
+
 enum InstrumentType {
   FOREX_CFD
   FUTURES
   STOCK
 }
+
 enum Side {
   LONG
   SHORT
 }
+
 enum TradeStatus {
   OPEN
   CLOSED
 }
+
 enum TradeResult {
   WIN
   LOSS
   BREAKEVEN
 }
+
 enum NoteKind {
   TRADE
   DAILY
   SESSION_RECAP
   FREE
 }
+
 enum RuleKind {
   TIME_BY
   PERCENT_WITH_FIELD
@@ -52,6 +59,7 @@ enum RuleKind {
   MAX_LOSS_PER_DAY
   MANUAL_CHECK
 }
+
 enum ImportSource {
   MT4_HTML
   MT4_CSV
@@ -61,6 +69,7 @@ enum ImportSource {
   EA_PUSH
   MANUAL
 }
+
 enum ImportStatus {
   RUNNING
   DONE
@@ -75,155 +84,158 @@ model User {
   createdAt    DateTime @default(now())
 }
 
-model Setting {            // single-row app settings
-  id                  Int     @id @default(1)
-  displayTimezone     String  @default("Asia/Hong_Kong")
-  displayCurrency     String  @default("AUD")
-  breakevenThreshold  Decimal @default(0) @db.Decimal(18, 2)
-  tradingDays         Int[]   @default([1, 2, 3, 4, 5])
-  brokerUtcOffsetMin  Int     @default(120)   // fallback when broker tz not set per account
+model Setting {
+  id                 Int     @id @default(1)
+  displayTimezone    String  @default("Asia/Hong_Kong")
+  displayCurrency    String  @default("AUD")
+  breakevenThreshold Decimal @default(0) @db.Decimal(18, 2)
+  tradingDays        Int[]   @default([1, 2, 3, 4, 5])
+  brokerUtcOffsetMin Int     @default(120) // fallback when broker tz not set per account
 }
 
-model FxRate {             // manual currency rates (stub conversion layer)
+model FxRate {
   base  String
   quote String
   rate  Decimal @db.Decimal(18, 8)
+
   @@id([base, quote])
 }
 
-model SymbolConfig {       // per-symbol pip size etc.
-  symbol         String         @id        // normalised e.g. XAUUSD (broker suffixes stripped)
+model SymbolConfig {
+  symbol         String         @id // normalised e.g. XAUUSD (broker suffixes stripped)
   instrumentType InstrumentType @default(FOREX_CFD)
   pipSize        Decimal        @default(0.01) @db.Decimal(18, 8)
-  contractSize   Decimal        @default(100)  @db.Decimal(18, 4)
-  aliases        String[]                  // e.g. ["XAUUSD.a","GOLD"]
+  contractSize   Decimal        @default(100) @db.Decimal(18, 4)
+  aliases        String[] // e.g. ["XAUUSD.a","GOLD"]
 }
 
 // ───────────── Accounts & imports ─────────────
 model Account {
-  id               String     @id @default(cuid())
-  name             String
-  broker           String?
-  platform         Platform   @default(MT4)
-  mtLogin          String?                    // MT account number (investor login)
-  mtServer         String?                    // broker server name, e.g. "ICMarketsSC-Live01"
-  metaapiAccountId String?                    // MetaApi account id. The investor password is sent to MetaApi once and NEVER stored in our DB.
-  currency         String     @default("AUD")
-  startingBalance  Decimal    @db.Decimal(18, 2)
-  brokerUtcOffsetMin Int?                     // server tz offset, overrides Setting
-  syncType         SyncType   @default(AUTO_METAAPI)
-  syncOnLogin      Boolean    @default(true)  // pull new deals whenever I sign in
-  backfillFrom     DateTime?                  // first sync pulls history from here (chosen when connecting)
-  ingestTokenHash  String?    @unique         // sha256 of the EA token (the token itself is shown once and never stored)
-  lastHeartbeatAt  DateTime?                  // last time the MT4 EA phoned home
-  brokerTimeMode   String     @default("NYCLOSE") // how MT4 server time maps to UTC: NYCLOSE | UTC+2 | an IANA zone
-  lastReportedOffsetMin Int?                  // server offset the EA last reported (sanity check only)
-  syncCursor       DateTime?                  // time of last deal pulled; next pull starts here (resumable)
-  lastSyncAt       DateTime?                  // last successful pull
-  syncingUntil     DateTime?                  // soft lock so two syncs never run on one account at once
-  lastSyncError    String?                    // drives the red/amber sync badge
-  lastBalance      Decimal?   @db.Decimal(18, 2)
-  lastEquity       Decimal?   @db.Decimal(18, 2)
-  archived         Boolean    @default(false)
-  createdAt        DateTime   @default(now())
+  id                    String    @id @default(cuid())
+  name                  String
+  broker                String?
+  platform              Platform  @default(MT4)
+  mtLogin               String? // MT account number (investor login)
+  mtServer              String? // broker server name, e.g. "ICMarketsSC-Live01"
+  metaapiAccountId      String? // MetaApi account id. The investor password is sent to MetaApi once and NEVER stored in our DB.
+  currency              String    @default("AUD")
+  startingBalance       Decimal   @db.Decimal(18, 2)
+  brokerUtcOffsetMin    Int? // server tz offset, overrides Setting
+  syncType              SyncType  @default(AUTO_METAAPI)
+  syncOnLogin           Boolean   @default(true) // pull new deals whenever I sign in
+  backfillFrom          DateTime? // first sync pulls history from here (chosen when connecting)
+  ingestTokenHash       String?   @unique // sha256 of the EA token (the token itself is shown once and never stored)
+  lastHeartbeatAt       DateTime? // last time the MT4 EA phoned home
+  brokerTimeMode        String    @default("NYCLOSE") // how MT4 server time maps to UTC: NYCLOSE | UTC+2 | an IANA zone
+  lastReportedOffsetMin Int? // server offset the EA last reported (sanity check only)
+  syncCursor            DateTime? // time of last deal pulled; next pull starts here (resumable)
+  lastSyncAt            DateTime? // last successful pull
+  syncingUntil          DateTime? // soft lock so two syncs never run on one account at once
+  lastSyncError         String? // drives the red/amber sync badge
+  lastBalance           Decimal?  @db.Decimal(18, 2)
+  lastEquity            Decimal?  @db.Decimal(18, 2)
+  archived              Boolean   @default(false)
+  createdAt             DateTime  @default(now())
 
   trades        Trade[]
   imports       ImportBatch[]
   balanceEvents BalanceEvent[]
   brokerOrders  BrokerOrder[]
+
   @@unique([platform, mtLogin])
 }
 
 model ImportBatch {
-  id          String       @id @default(cuid())
-  accountId   String
-  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  source      ImportSource
-  status      ImportStatus @default(RUNNING)
-  filename    String?
-  tradesNew   Int          @default(0)
-  tradesUpd   Int          @default(0)
-  tradesSkip  Int          @default(0)
-  error       String?
-  startedAt   DateTime     @default(now())
-  finishedAt  DateTime?
+  id         String       @id @default(cuid())
+  accountId  String
+  account    Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  source     ImportSource
+  status     ImportStatus @default(RUNNING)
+  filename   String?
+  tradesNew  Int          @default(0)
+  tradesUpd  Int          @default(0)
+  tradesSkip Int          @default(0)
+  error      String?
+  startedAt  DateTime     @default(now())
+  finishedAt DateTime?
 }
 
-model ImportMapping {      // saved generic-CSV column mappings
+model ImportMapping {
   id      String @id @default(cuid())
   name    String @unique
   mapping Json
 }
 
-model BalanceEvent {       // deposits / withdrawals / credits → balance curve
-  id         String   @id @default(cuid())
-  accountId  String
-  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+model BalanceEvent {
+  id           String   @id @default(cuid())
+  accountId    String
+  account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   brokerTicket String?
-  at         DateTime
-  amount     Decimal  @db.Decimal(18, 2)  // + deposit, − withdrawal
-  comment    String?
+  at           DateTime
+  amount       Decimal  @db.Decimal(18, 2) // + deposit, − withdrawal
+  comment      String?
+
   @@unique([accountId, brokerTicket])
   @@index([accountId, at])
 }
 
 // ───────────── Trades ─────────────
 model Trade {
-  id            String         @id @default(cuid())
-  accountId     String
-  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  brokerTicket  String?                              // position/order ticket → idempotent upserts
-  symbol        String
+  id             String         @id @default(cuid())
+  accountId      String
+  account        Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  brokerTicket   String? // position/order ticket → idempotent upserts
+  symbol         String
   instrumentType InstrumentType @default(FOREX_CFD)
-  side          Side
-  status        TradeStatus
-  openedAt      DateTime
-  closedAt      DateTime?
-  holdSeconds   Int?
-  intraday      Boolean        @default(true)
-  openDay       DateTime       @db.Date              // in display tz, for day grouping
-  closeDay      DateTime?      @db.Date
+  side           Side
+  status         TradeStatus
+  openedAt       DateTime
+  closedAt       DateTime?
+  holdSeconds    Int?
+  intraday       Boolean        @default(true)
+  openDay        DateTime       @db.Date // in display tz, for day grouping
+  closeDay       DateTime?      @db.Date
 
-  quantity      Decimal        @db.Decimal(18, 4)    // total lots opened
-  avgEntry      Decimal        @db.Decimal(18, 5)
-  avgExit       Decimal?       @db.Decimal(18, 5)
-  grossPnl      Decimal        @default(0) @db.Decimal(18, 2)
-  commission    Decimal        @default(0) @db.Decimal(18, 2)
-  swap          Decimal        @default(0) @db.Decimal(18, 2)
-  fees          Decimal        @default(0) @db.Decimal(18, 2)
-  netPnl        Decimal        @default(0) @db.Decimal(18, 2)
-  netRoi        Decimal?       @db.Decimal(12, 4)
-  pips          Decimal?       @db.Decimal(14, 2)
-  returnPerPip  Decimal?       @db.Decimal(14, 4)
-  adjustedCost  Decimal?       @db.Decimal(18, 2)
-  result        TradeResult?
+  quantity     Decimal      @db.Decimal(18, 4) // total lots opened
+  avgEntry     Decimal      @db.Decimal(18, 5)
+  avgExit      Decimal?     @db.Decimal(18, 5)
+  grossPnl     Decimal      @default(0) @db.Decimal(18, 2)
+  commission   Decimal      @default(0) @db.Decimal(18, 2)
+  swap         Decimal      @default(0) @db.Decimal(18, 2)
+  fees         Decimal      @default(0) @db.Decimal(18, 2)
+  netPnl       Decimal      @default(0) @db.Decimal(18, 2)
+  netRoi       Decimal?     @db.Decimal(12, 4)
+  pips         Decimal?     @db.Decimal(14, 2)
+  returnPerPip Decimal?     @db.Decimal(14, 4)
+  adjustedCost Decimal?     @db.Decimal(18, 2)
+  result       TradeResult?
 
-  stopLoss      Decimal?       @db.Decimal(18, 5)
-  profitTarget  Decimal?       @db.Decimal(18, 5)
-  initialTarget Decimal?       @db.Decimal(18, 5)
-  maePrice      Decimal?       @db.Decimal(18, 5)
-  mfePrice      Decimal?       @db.Decimal(18, 5)
-  tradeRisk     Decimal?       @db.Decimal(18, 2)    // initial $ risk
-  plannedR      Decimal?       @db.Decimal(10, 3)
-  realizedR     Decimal?       @db.Decimal(10, 3)
-  rating        Decimal?       @db.Decimal(2, 1)     // 0.5–5
-  reviewed      Boolean        @default(false)
-  chartDrawings Json?                                // lines, boxes and notes drawn on the chart: [{id,kind,color,points,text}]
+  stopLoss      Decimal? @db.Decimal(18, 5)
+  profitTarget  Decimal? @db.Decimal(18, 5)
+  initialTarget Decimal? @db.Decimal(18, 5)
+  maePrice      Decimal? @db.Decimal(18, 5)
+  mfePrice      Decimal? @db.Decimal(18, 5)
+  tradeRisk     Decimal? @db.Decimal(18, 2) // initial $ risk
+  plannedR      Decimal? @db.Decimal(10, 3)
+  realizedR     Decimal? @db.Decimal(10, 3)
+  rating        Decimal? @db.Decimal(2, 1) // 0.5–5
+  reviewed      Boolean  @default(false)
+  chartDrawings Json? // lines, boxes and notes drawn on the chart: [{id,kind,color,points,text}]
   mtComment     String?
-  magicNumber   Int?                                  // EA/magic number from MT
-  shareToken    String?        @unique                // optional read-only public link
+  magicNumber   Int? // EA/magic number from MT
+  shareToken    String?  @unique // optional read-only public link
 
-  strategyId    String?
-  strategy      Strategy?      @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  strategyId String?
+  strategy   Strategy? @relation(fields: [strategyId], references: [id], onDelete: SetNull)
 
-  executions    Execution[]
-  tags          TradeTag[]
-  attachments   Attachment[]
-  notes         Note[]
-  ruleChecks    TradeRuleCheck[]
+  executions  Execution[]
+  tags        TradeTag[]
+  attachments Attachment[]
+  notes       Note[]
+  ruleChecks  TradeRuleCheck[]
 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([accountId, brokerTicket])
   @@index([accountId, closedAt])
@@ -234,16 +246,17 @@ model Trade {
 }
 
 model Execution {
-  id        String   @id @default(cuid())
-  tradeId   String
-  trade     Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
-  brokerTicket String?                      // partial-close child ticket
-  at        DateTime
-  price     Decimal  @db.Decimal(18, 5)
-  quantity  Decimal  @db.Decimal(18, 4)     // + opens/adds, − reduces/closes (in trade direction)
-  grossPnl  Decimal  @default(0) @db.Decimal(18, 2)
-  fee       Decimal  @default(0) @db.Decimal(18, 2)
-  swap      Decimal  @default(0) @db.Decimal(18, 2)
+  id           String   @id @default(cuid())
+  tradeId      String
+  trade        Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  brokerTicket String? // partial-close child ticket
+  at           DateTime
+  price        Decimal  @db.Decimal(18, 5)
+  quantity     Decimal  @db.Decimal(18, 4) // + opens/adds, − reduces/closes (in trade direction)
+  grossPnl     Decimal  @default(0) @db.Decimal(18, 2)
+  fee          Decimal  @default(0) @db.Decimal(18, 2)
+  swap         Decimal  @default(0) @db.Decimal(18, 2)
+
   @@unique([tradeId, brokerTicket])
   @@index([tradeId, at])
 }
@@ -258,57 +271,59 @@ model Strategy {
   archived    Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  groups  RuleGroup[]
-  trades  Trade[]
-  missed  MissedTrade[]
-  notes   Note[]
+  groups            RuleGroup[]
+  trades            Trade[]
+  missed            MissedTrade[]
+  notes             Note[]
+  trainingScenarios TrainingScenario[]
 }
 
 model RuleGroup {
-  id         String   @id @default(cuid())
+  id         String         @id @default(cuid())
   strategyId String
-  strategy   Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  name       String                     // e.g. "Entry criteria", "Risk"
-  position   Int      @default(0)
+  strategy   Strategy       @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  name       String // e.g. "Entry criteria", "Risk"
+  position   Int            @default(0)
   rules      StrategyRule[]
 }
 
 model StrategyRule {
-  id       String    @id @default(cuid())
+  id       String           @id @default(cuid())
   groupId  String
-  group    RuleGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group    RuleGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   text     String
-  position Int       @default(0)
+  position Int              @default(0)
   checks   TradeRuleCheck[]
 }
 
-model TradeRuleCheck {     // which strategy rules were followed on a trade
+model TradeRuleCheck {
   tradeId  String
   ruleId   String
   followed Boolean
   trade    Trade        @relation(fields: [tradeId], references: [id], onDelete: Cascade)
   rule     StrategyRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
   @@id([tradeId, ruleId])
 }
 
 model MissedTrade {
-  id         String   @id @default(cuid())
-  strategyId String
-  strategy   Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  symbol     String?
-  seenAt     DateTime
-  side       Side?
+  id            String   @id @default(cuid())
+  strategyId    String
+  strategy      Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  symbol        String?
+  seenAt        DateTime
+  side          Side?
   hypotheticalR Decimal? @db.Decimal(10, 3)
-  reason     String?                    // why I didn't take it
+  reason        String? // why I didn't take it
   screenshotUrl String?
 }
 
 // ───────────── Tags ─────────────
 model TagCategory {
-  id       String @id @default(cuid())
-  name     String @unique
+  id       String  @id @default(cuid())
+  name     String  @unique
   color    String?
-  position Int    @default(0)
+  position Int     @default(0)
   tags     Tag[]
 }
 
@@ -319,28 +334,30 @@ model Tag {
   name       String
   trades     TradeTag[]
   notes      NoteTag[]
+
   @@unique([categoryId, name])
 }
 
 model TradeTag {
   tradeId String
   tagId   String
-  trade   Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
-  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@id([tradeId, tagId])
   @@index([tagId])
 }
 
 model Attachment {
-  id        String   @id @default(cuid())
-  tradeId   String?
-  trade     Trade?   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
-  noteId    String?
-  note      Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  storageKey String                              // local path or S3 key
-  mime      String
-  sizeBytes Int
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  tradeId    String?
+  trade      Trade?   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  noteId     String?
+  note       Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  storageKey String // local path or S3 key
+  mime       String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
 }
 
 // ───────────── Notebook ─────────────
@@ -352,33 +369,34 @@ model NoteFolder {
 }
 
 model NoteTemplate {
-  id       String   @id @default(cuid())
-  name     String
-  kind     NoteKind @default(TRADE)
-  content  Json                                  // TipTap JSON
-  isDefault Boolean @default(false)
+  id        String   @id @default(cuid())
+  name      String
+  kind      NoteKind @default(TRADE)
+  content   Json // TipTap JSON
+  isDefault Boolean  @default(false)
 }
 
 model Note {
-  id        String     @id @default(cuid())
-  kind      NoteKind   @default(FREE)
-  title     String     @default("")
-  content   Json                                   // TipTap JSON
-  plainText String     @default("")                // for full-text search (tsvector GIN index added in raw migration)
-  favorite  Boolean    @default(false)
-  folderId  String?
-  folder    NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  tradeId   String?
-  trade     Trade?     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
-  strategyId String?
-  strategy  Strategy?  @relation(fields: [strategyId], references: [id], onDelete: SetNull)
-  day       DateTime?  @db.Date                    // for DAILY / SESSION_RECAP notes
-  startedAt DateTime?                              // when "Start my day" was pressed (discipline)
-  deletedAt DateTime?                              // trash (soft delete)
-  tags      NoteTag[]
+  id          String       @id @default(cuid())
+  kind        NoteKind     @default(FREE)
+  title       String       @default("")
+  content     Json // TipTap JSON
+  plainText   String       @default("") // for full-text search (tsvector GIN index added in raw migration)
+  favorite    Boolean      @default(false)
+  folderId    String?
+  folder      NoteFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tradeId     String?
+  trade       Trade?       @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  strategyId  String?
+  strategy    Strategy?    @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  day         DateTime?    @db.Date // for DAILY / SESSION_RECAP notes
+  startedAt   DateTime? // when "Start my day" was pressed (discipline)
+  deletedAt   DateTime? // trash (soft delete)
+  tags        NoteTag[]
   attachments Attachment[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
   @@index([kind, day])
   @@index([tradeId])
 }
@@ -386,58 +404,62 @@ model Note {
 model NoteTag {
   noteId String
   tagId  String
-  note   Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@id([noteId, tagId])
 }
 
 // ───────────── Discipline / progress ─────────────
 model DisciplineRule {
-  id        String   @id @default(cuid())
-  name      String
-  kind      RuleKind
-  params    Json                                  // { time:"09:30" } | { amount:100 } | { field:"stopLoss"|"strategyId" } …
-  active    Boolean  @default(true)
-  position  Int      @default(0)
-  logs      DisciplineLog[]
+  id       String          @id @default(cuid())
+  name     String
+  kind     RuleKind
+  params   Json // { time:"09:30" } | { amount:100 } | { field:"stopLoss"|"strategyId" } …
+  active   Boolean         @default(true)
+  position Int             @default(0)
+  logs     DisciplineLog[]
 }
 
-model DisciplineLog {      // one row per rule per day (auto-evaluated or manual tick)
+model DisciplineLog {
   ruleId   String
   day      DateTime       @db.Date
   followed Boolean
   auto     Boolean        @default(true)
   rule     DisciplineRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
   @@id([ruleId, day])
 }
 
 // ───────────── Performance caches ─────────────
-model DailySummary {       // materialised per account/day; refreshed after each import/edit
-  accountId   String
-  day         DateTime @db.Date
-  trades      Int
-  wins        Int
-  losses      Int
-  breakevens  Int
-  grossPnl    Decimal  @db.Decimal(18, 2)
-  commission  Decimal  @db.Decimal(18, 2)
-  swap        Decimal  @db.Decimal(18, 2)
-  netPnl      Decimal  @db.Decimal(18, 2)
-  volume      Decimal  @db.Decimal(18, 4)
-  grossWin    Decimal  @db.Decimal(18, 2)
-  grossLoss   Decimal  @db.Decimal(18, 2)
+model DailySummary {
+  accountId  String
+  day        DateTime @db.Date
+  trades     Int
+  wins       Int
+  losses     Int
+  breakevens Int
+  grossPnl   Decimal  @db.Decimal(18, 2)
+  commission Decimal  @db.Decimal(18, 2)
+  swap       Decimal  @db.Decimal(18, 2)
+  netPnl     Decimal  @db.Decimal(18, 2)
+  volume     Decimal  @db.Decimal(18, 4)
+  grossWin   Decimal  @db.Decimal(18, 2)
+  grossLoss  Decimal  @db.Decimal(18, 2)
+
   @@id([accountId, day])
 }
 
-model Candle {             // cached market data for trade charts
+model Candle {
   symbol    String
-  timeframe String                                // M1 M5 M15 H1 H4 D1
+  timeframe String // M1 M5 M15 H1 H4 D1
   t         DateTime
   open      Decimal  @db.Decimal(18, 5)
   high      Decimal  @db.Decimal(18, 5)
   low       Decimal  @db.Decimal(18, 5)
   close     Decimal  @db.Decimal(18, 5)
   volume    Decimal? @db.Decimal(18, 2)
+
   @@id([symbol, timeframe, t])
 }
 
@@ -447,9 +469,9 @@ model BrokerOrder {
   accountId  String
   account    Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   ticket     String
-  type       Int                                   // 0 buy, 1 sell
+  type       Int // 0 buy, 1 sell
   isOpen     Boolean   @default(false)
-  openRaw    Int                                   // MT4 server-clock seconds exactly as sent, so times can be re-converted if the broker-time setting changes
+  openRaw    Int // MT4 server-clock seconds exactly as sent, so times can be re-converted if the broker-time setting changes
   closeRaw   Int?
   openTime   DateTime
   closeTime  DateTime?
@@ -463,9 +485,10 @@ model BrokerOrder {
   stopLoss   Decimal?  @db.Decimal(18, 5)
   takeProfit Decimal?  @db.Decimal(18, 5)
   comment    String?
-  refTicket  String?                               // ticket named by a "from #n" / "to #n" comment
+  refTicket  String? // ticket named by a "from #n" / "to #n" comment
   magic      Int?
   updatedAt  DateTime  @updatedAt
+
   @@unique([accountId, ticket])
   @@index([accountId, refTicket])
   @@index([accountId, closeTime])
@@ -474,9 +497,63 @@ model BrokerOrder {
 /// Which periods of a symbol's candles have been fully downloaded, so weekends/holidays (which have no candles) are not re-fetched.
 model CandleCoverage {
   symbol    String
-  timeframe String                                // native timeframes only: M1 (per day), H1 (per month), D1 (per year)
-  period    String                                // 2026-09-07 | 2026-09 | 2026
+  timeframe String // native timeframes only: M1 (per day), H1 (per month), D1 (per year)
+  period    String // 2026-09-07 | 2026-09 | 2026
   fetchedAt DateTime @default(now())
   count     Int      @default(0)
+
   @@id([symbol, timeframe, period])
+}
+
+// ───────────── Training ─────────────
+enum ScenarioKind {
+  SETUP // chart stops at a decision point; you mark entry, stop and target
+  EVENT // news release replayed candle by candle (5s); you trade it live
+}
+
+model TrainingScenario {
+  id             String            @id @default(cuid())
+  title          String
+  symbol         String            @default("XAUUSD")
+  kind           ScenarioKind      @default(SETUP)
+  decisionAt     DateTime // the chart is hidden after this instant (UTC)
+  timeframe      String            @default("M5") // first timeframe shown: M1 M5 M15 (S5 for events)
+  horizonMinutes Int               @default(240) // how long the trade is followed after the decision
+  lookbackHours  Int               @default(24) // context shown before the decision
+  side           Side? // the expert answer: direction, entry zone, stop, target
+  entryLow       Decimal?          @db.Decimal(18, 5)
+  entryHigh      Decimal?          @db.Decimal(18, 5)
+  stopLoss       Decimal?          @db.Decimal(18, 5)
+  takeProfit     Decimal?          @db.Decimal(18, 5)
+  notes          String? // the explanation, shown after the attempt
+  imageKey       String? // your annotated screenshot, shown after the attempt
+  strategyId     String?
+  strategy       Strategy?         @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  difficulty     Int               @default(2) // 1 easy .. 3 hard
+  archived       Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  attempts       TrainingAttempt[]
+
+  @@index([archived, createdAt])
+}
+
+model TrainingAttempt {
+  id         String           @id @default(cuid())
+  scenarioId String
+  scenario   TrainingScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  side       Side
+  entryAt    DateTime? // live mode: when the order was placed
+  entry      Decimal          @db.Decimal(18, 5)
+  stopLoss   Decimal          @db.Decimal(18, 5)
+  takeProfit Decimal          @db.Decimal(18, 5)
+  filled     Boolean
+  outcome    String // TP | SL | TIMEOUT | NO_FILL
+  exitPrice  Decimal?         @db.Decimal(18, 5)
+  rMultiple  Decimal?         @db.Decimal(10, 3)
+  matchScore Int? // 0..100 against the expert answer (null when the scenario has none)
+  details    Json?
+  repeat     Boolean          @default(false) // not the first time this scenario was attempted
+
+  @@index([scenarioId, createdAt])
 }
