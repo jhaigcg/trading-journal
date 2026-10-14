@@ -33,16 +33,16 @@ const fromLocal = (local: string, tz: string): string | null => {
  * Author a training scenario: pick the moment, mark the expert answer on the real chart (you can see the future here),
  * explain it, and attach your annotated screenshot.
  */
-export function ScenarioForm({ initial, strategies, tz, tzOffsetMin }: { initial: ScenarioEdit | null; strategies: { id: string; name: string }[]; tz: string; tzOffsetMin: number }) {
+export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind = "SETUP" }: { initial: ScenarioEdit | null; startKind?: "SETUP" | "EVENT"; strategies: { id: string; name: string }[]; tz: string; tzOffsetMin: number }) {
   const router = useRouter();
   const [f, setF] = useState({
     title: initial?.title ?? "",
     symbol: initial?.symbol ?? "XAUUSD",
-    kind: initial?.kind ?? ("SETUP" as "SETUP" | "EVENT"),
+    kind: initial?.kind ?? startKind,
     at: toLocal(initial?.decisionAt ?? "", tz),
-    timeframe: initial?.timeframe ?? "M5",
-    horizon: String(initial?.horizonMinutes ?? 240),
-    lookback: String(initial?.lookbackHours ?? 24),
+    timeframe: initial?.timeframe ?? (startKind === "EVENT" ? "S5" : "M5"),
+    horizon: String(initial?.horizonMinutes ?? (startKind === "EVENT" ? 30 : 240)),
+    lookback: String(initial?.lookbackHours ?? (startKind === "EVENT" ? 1 : 24)),
     side: (initial?.side ?? "") as "" | "LONG" | "SHORT",
     entryLow: initial?.entryLow != null ? String(initial.entryLow) : "",
     entryHigh: initial?.entryHigh != null ? String(initial.entryHigh) : "",

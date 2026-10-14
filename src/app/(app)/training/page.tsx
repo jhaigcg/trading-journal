@@ -23,6 +23,61 @@ function Stat({ label, value, sub }: { label: string; value: React.ReactNode; su
   );
 }
 
+type Row = Awaited<ReturnType<typeof listScenarios>>[number];
+
+function Section({ title, blurb, kind, scenarios: list, tz }: { title: string; blurb: string; kind: "SETUP" | "EVENT"; scenarios: Row[]; tz: string }) {
+  return (
+    <section aria-label={title} className="mb-8">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">
+            {title} <span className="num text-sm font-normal text-muted">{list.length}</span>
+          </h2>
+          <p className="mt-0.5 max-w-[640px] text-xs text-muted">{blurb}</p>
+        </div>
+        <Link href={`/training/new?kind=${kind}`} className="inline-flex min-h-9 items-center rounded-control border border-line-strong px-3 text-[13px] hover:bg-nav-active">
+          + Add {kind === "EVENT" ? "news event" : "price action"} scenario
+        </Link>
+      </div>
+      {list.length === 0 ? (
+        <p className="rounded-card border border-dashed border-line px-4 py-6 text-center text-sm text-muted">None yet.</p>
+      ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {list.map((s) => (
+                <li key={s.id}>
+                  <Card className="flex h-full flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="min-w-0 text-[15px] font-semibold">{s.title}</h2>
+                      <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px]", s.kind === "EVENT" ? "bg-accent/15 text-accent" : "bg-nav-active text-ink-2")}>{s.kind === "EVENT" ? "News event" : "Setup"}</span>
+                    </div>
+                    <p className="num text-xs text-muted">
+                      {s.symbol} · {TF_NAMES[s.timeframe] ?? s.timeframe} · {when(s.decisionAt, tz)}
+                    </p>
+                    <p className="text-xs text-muted">
+                      <span className="text-accent">{stars(s.difficulty)}</span>
+                      {s.playbook && ` · ${s.playbook}`}
+                      {!s.hasExpert && " · no expert answer"}
+                    </p>
+                    <div className="num mt-auto flex items-center justify-between pt-2 text-xs text-muted">
+                      <span>{s.attempts === 0 ? "Not tried yet" : `${s.attempts} ${s.attempts === 1 ? "attempt" : "attempts"} · best ${s.bestMatch ?? "—"} · last ${s.lastR == null ? (s.lastMatch ?? "—") : `${sign(s.lastR)}R`}`}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/training/${s.id}`} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-control bg-accent text-[13px] font-semibold text-bg hover:bg-[var(--accent-hover)]">
+                        {s.attempts === 0 ? "Train" : "Train again"}
+                      </Link>
+                      <Link href={`/training/${s.id}/edit`} className="inline-flex min-h-10 items-center rounded-control border border-line-strong px-3 text-[13px] hover:bg-nav-active">
+                        Edit
+                      </Link>
+                    </div>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+      )}
+    </section>
+  );
+}
+
 export default async function TrainingPage() {
   const { tz } = await settingsFor();
   const [scenarios, stats] = await Promise.all([listScenarios(), trainingStats(tz)]);
@@ -80,37 +135,8 @@ export default async function TrainingPage() {
             </Card>
           )}
 
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {scenarios.map((s) => (
-              <li key={s.id}>
-                <Card className="flex h-full flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="min-w-0 text-[15px] font-semibold">{s.title}</h2>
-                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px]", s.kind === "EVENT" ? "bg-accent/15 text-accent" : "bg-nav-active text-ink-2")}>{s.kind === "EVENT" ? "News event" : "Setup"}</span>
-                  </div>
-                  <p className="num text-xs text-muted">
-                    {s.symbol} · {TF_NAMES[s.timeframe] ?? s.timeframe} · {when(s.decisionAt, tz)}
-                  </p>
-                  <p className="text-xs text-muted">
-                    <span className="text-accent">{stars(s.difficulty)}</span>
-                    {s.playbook && ` · ${s.playbook}`}
-                    {!s.hasExpert && " · no expert answer"}
-                  </p>
-                  <div className="num mt-auto flex items-center justify-between pt-2 text-xs text-muted">
-                    <span>{s.attempts === 0 ? "Not tried yet" : `${s.attempts} ${s.attempts === 1 ? "attempt" : "attempts"} · best ${s.bestMatch ?? "—"} · last ${s.lastR == null ? (s.lastMatch ?? "—") : `${sign(s.lastR)}R`}`}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link href={`/training/${s.id}`} className="inline-flex min-h-10 flex-1 items-center justify-center rounded-control bg-accent text-[13px] font-semibold text-bg hover:bg-[var(--accent-hover)]">
-                      {s.attempts === 0 ? "Train" : "Train again"}
-                    </Link>
-                    <Link href={`/training/${s.id}/edit`} className="inline-flex min-h-10 items-center rounded-control border border-line-strong px-3 text-[13px] hover:bg-nav-active">
-                      Edit
-                    </Link>
-                  </div>
-                </Card>
-              </li>
-            ))}
-          </ul>
+          <Section title="Price action" blurb="Normal market conditions, no scheduled news. Mark your entry, stop loss and take profit on the chart." kind="SETUP" scenarios={scenarios.filter((s) => s.kind === "SETUP")} tz={tz} />
+          <Section title="News events" blurb="NFP, CPI and other high-impact releases. Replay the 5-second chart live and trade the break, usually with a limit order on the pullback." kind="EVENT" scenarios={scenarios.filter((s) => s.kind === "EVENT")} tz={tz} />
         </>
       )}
     </>

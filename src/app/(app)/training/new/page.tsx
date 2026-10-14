@@ -8,7 +8,8 @@ import { offsetMinutesAt } from "@/lib/time";
 
 export const metadata: Metadata = { title: "New training scenario" };
 
-export default async function NewScenarioPage() {
+export default async function NewScenarioPage({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
+  const startKind = (await searchParams).kind === "EVENT" ? "EVENT" : "SETUP";
   const { tz } = await settingsFor();
   const strategies = await db.strategy.findMany({ where: { archived: false }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   return (
@@ -17,7 +18,7 @@ export default async function NewScenarioPage() {
         ← Training
       </Link>
       <PageHeader title="New scenario" eyebrow="Training" />
-      <ScenarioForm initial={null} strategies={strategies} tz={tz} tzOffsetMin={offsetMinutesAt(new Date(), tz)} />
+      <ScenarioForm initial={null} startKind={startKind} strategies={strategies} tz={tz} tzOffsetMin={offsetMinutesAt(new Date(), tz)} />
     </>
   );
 }
