@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { rrOf, validateOrder, type Order } from "@/lib/training/sim";
 import type { Answer, AttemptResult, Question } from "@/lib/training/service";
+import { ZoneToggles } from "@/components/trades/zone-toggles";
+import { zonesAvailable, type ZoneChoice } from "@/lib/smc";
 import { TrainingChart, type ChartLine, type TradeBox } from "./training-chart";
 import { ResultPanel } from "./result-panel";
 import { clockText, postJson, useApi } from "./use-api";
@@ -28,6 +30,7 @@ const STEPS: { id: Field; label: string; color: string }[] = [
 export function SetupPlayer({ id, tzOffsetMin, nextHref }: { id: string; tzOffsetMin: number; nextHref: string | null }) {
   const [tf, setTf] = useState<string | null>(null);
   const [round, setRound] = useState(0);
+  const [zoneChoice, setZoneChoice] = useState<ZoneChoice>({ fvg: false, ob: false }); // off by default: they would give away part of the exercise
   const { data: q, error, loading } = useApi<Question>(`/api/training/${id}/question${tf ? `?tf=${tf}` : ""}`, round);
 
   const [side, setSide] = useState<"LONG" | "SHORT">("LONG");
@@ -135,12 +138,17 @@ export function SetupPlayer({ id, tzOffsetMin, nextHref }: { id: string; tzOffse
               {TF_NAME[t] ?? t}
             </button>
           ))}
+          {zonesAvailable(q.tf) && (
+            <span className="ml-2">
+              <ZoneToggles value={zoneChoice} onChange={setZoneChoice} />
+            </span>
+          )}
           {loading && <span className="ml-2 text-xs text-muted">Loading…</span>}
           <span className="ml-auto text-xs text-muted">
             {revealing ? (finished ? "Replay finished" : "Replaying what happened next…") : <>Decision point: <span className="num text-accent">{clockText(q.decisionT, tzOffsetMin)}</span></>}
           </span>
         </div>
-        <TrainingChart candles={candles} tzOffsetMin={tzOffsetMin} height={480} lines={lines} bands={bands} decisionT={decisionT} decisionLabel={revealing ? "Decision point" : "You are here"} box={box} onPick={revealing ? undefined : onPick} crosshairCursor={!revealing && !!active} />
+        <TrainingChart candles={candles} tzOffsetMin={tzOffsetMin} height={480} lines={lines} bands={bands} decisionT={decisionT} decisionLabel={revealing ? "Decision point" : "You are here"} box={box} onPick={revealing ? undefined : onPick} crosshairCursor={!revealing && !!active} zones={zonesAvailable(q.tf) ? zoneChoice : null} />
         {revealing && !finished && (
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setPlaying((p) => !p)} className="min-h-9 rounded-control border border-line-strong px-3 text-xs hover:bg-nav-active">

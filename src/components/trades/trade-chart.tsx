@@ -10,7 +10,10 @@ import { TF_LABEL, TF_SECONDS, TIMEFRAMES, type Timeframe } from "@/lib/market-d
 import type { ChartData } from "@/lib/queries/trade-chart";
 import { ChartToolbar, toolHint, type Tool } from "./chart-toolbar";
 import { DrawingsLayer } from "./drawings-layer";
+import { computeZones, zonesAvailable, type ZoneChoice } from "@/lib/smc";
 import { PositionBox } from "./position-box";
+import { ZonesLayer } from "./zones-layer";
+import { ZoneToggles } from "./zone-toggles";
 import { useJson } from "./use-json";
 
 // lightweight-charts needs concrete colours (it cannot read CSS variables), so these mirror the design tokens
@@ -86,6 +89,8 @@ export function TradeChart({
   const [toolsOpen, setToolsOpen] = useState(false); // phones: the drawing tools stay folded away until asked for
   const zonesRef = useRef(true);
   const boxRef = useRef<PositionBox | null>(null);
+  const zoneLayer = useRef<ZonesLayer | null>(null);
+  const [zoneChoice, setZoneChoice] = useState<ZoneChoice>({ fvg: true, ob: true });
 
   // drawing state: React state for the UI, refs for the chart's event handlers
   const [tool, setToolState] = useState<Tool>("cursor");
@@ -223,6 +228,9 @@ export function TradeChart({
     } else chart.timeScale().fitContent();
 
     // the user's own drawings and the click handling that creates and selects them
+    const zl = new ZonesLayer(shift);
+    series.attachPrimitive(zl);
+    zoneLayer.current = zl;
     const layer = new DrawingsLayer(shift, step);
     layer.drawings = drawingsRef.current;
     layer.selectedId = selectedRef.current;
@@ -295,6 +303,7 @@ export function TradeChart({
       chart.unsubscribeCrosshairMove(onMove);
       live.current = null;
       boxRef.current = null;
+      zoneLayer.current = null;
       chart.remove();
     };
   }, [data, tf, tzOffsetMin, editable, commit, select, setTool]);
@@ -304,6 +313,11 @@ export function TradeChart({
     zonesRef.current = zones;
     boxRef.current?.setVisible(zones);
   }, [zones]);
+
+  // fair value gaps and order blocks, found from the candles on the 5 and 15 minute charts
+  useEffect(() => {
+    zoneLayer.current?.set(data && zonesAvailable(tf) ? computeZones(data.candles, zoneChoice) : []);
+  }, [data, tf, zoneChoice, tzOffsetMin]);
 
   // keep the drawings layer in step with state
   useEffect(() => {
@@ -406,6 +420,11 @@ export function TradeChart({
             {TF_LABEL[t]}
           </button>
         ))}
+        {zonesAvailable(tf) && (
+          <span className="ml-2">
+            <ZoneToggles value={zoneChoice} onChange={setZoneChoice} />
+          </span>
+        )}
         <label className="ml-auto flex min-h-8 cursor-pointer items-center gap-1.5 text-xs text-muted">
           <input type="checkbox" checked={zones} onChange={(e) => setZones(e.target.checked)} className="accent-[var(--accent)]" />
           <span className="hidden sm:inline">Show entry to exit box</span>

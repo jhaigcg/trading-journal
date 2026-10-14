@@ -4,6 +4,8 @@ import { CandlestickSeries, ColorType, LineStyle, createChart, type IChartApi, t
 import { useEffect, useRef } from "react";
 import { PositionBox, type PositionBoxInput } from "@/components/trades/position-box";
 import type { Candle } from "@/lib/market-data/types";
+import { ZonesLayer } from "@/components/trades/zones-layer";
+import { computeZones, type ZoneChoice } from "@/lib/smc";
 import { TrainingLayer, type Band } from "./primitives";
 
 const C = { text: "#9AA4B2", grid: "#1D232C", border: "#222934", up: "#3DD39A", down: "#F26B6F" };
@@ -52,6 +54,7 @@ export function TrainingChart({
   onPick,
   crosshairCursor,
   visibleBars = 120,
+  zones,
 }: {
   candles: Candle[];
   tzOffsetMin: number;
@@ -64,15 +67,19 @@ export function TrainingChart({
   onPick?: (price: number, t: number | null) => void;
   crosshairCursor?: boolean;
   visibleBars?: number;
+  /** which kinds of fair value gap / order block to show, found from the candles given (so nothing from the future); omit for none */
+  zones?: ZoneChoice | null;
 }) {
   const el = useRef<HTMLDivElement>(null);
-  const live = useRef<{ chart: IChartApi; series: ISeriesApi<"Candlestick">; layer: TrainingLayer; lines: IPriceLine[]; box: PositionBox | null; count: number; lastT: number } | null>(null);
+  const live = useRef<{ chart: IChartApi; series: ISeriesApi<"Candlestick">; layer: TrainingLayer; zoneLayer: ZonesLayer; lines: IPriceLine[]; box: PositionBox | null; count: number; lastT: number } | null>(null);
   const pick = useRef(onPick);
   const shift = tzOffsetMin * 60;
+  const shiftRef = useRef(shift);
 
   useEffect(() => {
     pick.current = onPick;
-  }, [onPick]);
+    shiftRef.current = shift;
+  }, [onPick, shift]);
 
   // create the chart once
   useEffect(() => {
@@ -89,7 +96,9 @@ export function TrainingChart({
     const series = chart.addSeries(CandlestickSeries, { upColor: C.up, downColor: C.down, borderVisible: false, wickUpColor: C.up, wickDownColor: C.down });
     const layer = new TrainingLayer();
     series.attachPrimitive(layer);
-    live.current = { chart, series, layer, lines: [], box: null, count: 0, lastT: 0 };
+    const zoneLayer = new ZonesLayer(shiftRef.current);
+    series.attachPrimitive(zoneLayer);
+    live.current = { chart, series, layer, zoneLayer, lines: [], box: null, count: 0, lastT: 0 };
     const onClick = (p: { point?: { x: number; y: number }; time?: unknown }) => {
       if (!p.point || !pick.current) return;
       const price = series.coordinateToPrice(p.point.y);
@@ -135,6 +144,11 @@ export function TrainingChart({
       decisionT == null ? null : { time: alignTime(candles, decisionT) + shift, label: decisionLabel },
     );
   }, [bands, decisionT, decisionLabel, candles, shift]);
+
+  // fair value gaps and order blocks
+  useEffect(() => {
+    live.current?.zoneLayer.set(zones ? computeZones(candles, zones) : []);
+  }, [zones, candles, shift]);
 
   // the trade box
   useEffect(() => {
