@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import type { Candle } from "@/lib/market-data/types";
 import type { ScenarioEdit } from "@/lib/training/scenarios";
 import type { Prefill } from "@/lib/training/prefill";
+import { unavailableReason } from "@/lib/training/availability";
 import { EVENT_TFS, SETUP_TFS, TF_NAMES } from "@/lib/training/constants";
 import { TrainingChart, type ChartLine } from "./training-chart";
 import { useApi } from "./use-api";
@@ -61,15 +62,30 @@ export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind =
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chartProblem, setChartProblem] = useState<string | null>(null); // why the chart cannot be loaded, shown above the chart
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? null);
 
-  const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
+  const set = (k: keyof typeof f, v: string) =>
+    setF((s) => {
+      const next = { ...s, [k]: v };
+      // with a stop below the entry it is a long, above it a short (only while no direction is chosen)
+      const entry = Number(next.entryLow || next.entryHigh);
+      const stop = Number(next.stopLoss);
+      if (!next.side && (k === "stopLoss" || k === "entryLow" || k === "entryHigh") && entry > 0 && stop > 0 && stop !== entry) next.side = stop < entry ? "LONG" : "SHORT";
+      return next;
+    });
+  // price fields take numbers only, so a note typed into one (for example "Liquidity: 4133") cannot break saving
+  const setPrice = (k: Pick, v: string) => set(k, v.replace(/[^0-9.]/g, ""));
   const tfs = f.kind === "EVENT" ? EVENT_TFS : SETUP_TFS;
   const iso = fromLocal(f.at, tz);
   const decisionT = iso ? Math.floor(Date.parse(iso) / 1000) : null;
 
   const loadChart = () => {
-    if (!iso) return setError("Enter the decision time first.");
+    if (!iso) return setChartProblem("Enter the decision time first.");
+    const fmt = (sec: number) => new Intl.DateTimeFormat("en-AU", { timeZone: tz, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(sec * 1000));
+    const why = unavailableReason(Date.parse(iso) / 1000, Date.now() / 1000, fmt);
+    if (why) return setChartProblem(why);
+    setChartProblem(null);
     setError(null);
     const q = new URLSearchParams({ symbol: f.symbol, at: iso, tf: f.timeframe, kind: f.kind, lookback: f.lookback, horizon: f.horizon });
     setPreviewUrl(`/api/training/preview?${q}`);
@@ -131,9 +147,9 @@ export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind =
           </button>
           <span className="text-xs text-muted">{loading ? "Loading prices…" : "Shows the real prices around the decision time, including what happens next, so you can mark the answer."}</span>
         </div>
-        {previewError && (
+        {(chartProblem || previewError) && (
           <p role="alert" className="rounded-control bg-loss-bg px-3 py-2 text-sm text-loss">
-            {previewError}
+            {chartProblem ?? previewError}
           </p>
         )}
         {preview && preview.candles.length > 0 ? (
@@ -142,7 +158,14 @@ export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind =
             <p className="text-xs text-muted">{pick ? `Click the chart to set: ${PICKS.find((p) => p.id === pick)?.label}.` : "Choose a field on the right (Pick on chart), then click the chart."}</p>
           </>
         ) : (
-          !loading && !previewError && <div className="flex h-[300px] items-center justify-center rounded-control border border-line bg-inset text-sm text-muted">Set the date and time, then Load chart.</div>
+          !loading && !previewError && !chartProblem && (
+            <ol className="space-y-2 rounded-control border border-line bg-inset p-5 text-sm text-muted">
+              <li><span className="text-ink">1.</span> Set the decision time on the right: the moment the chart should stop. Use a time up to the end of yesterday (UTC), because prices are published after each day ends.</li>
+              <li><span className="text-ink">2.</span> Press <span className="text-ink">Load chart</span>. You see the real prices including what happens next.</li>
+              <li><span className="text-ink">3.</span> Press <span className="text-ink">Pick on chart</span> beside a field and click the chart, or type the prices. One entry price is enough: leave the zone top empty.</li>
+              <li><span className="text-ink">4.</span> Write why in the notes, add your annotated screenshot if you have one, and save.</li>
+            </ol>
+          )
         )}
       </div>
 
@@ -238,7 +261,7 @@ export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind =
                   {pick === p.id ? "Click the chart…" : "Pick on chart"}
                 </button>
               </span>
-              <input inputMode="decimal" value={f[p.id]} onChange={(e) => set(p.id, e.target.value)} placeholder="price" className={input} />
+              <input inputMode="decimal" value={f[p.id]} onChange={(e) => setPrice(p.id, e.target.value)} placeholder={p.id === "entryHigh" ? "optional: empty = one entry price" : "price"} className={input} />
             </label>
           ))}
         </div>

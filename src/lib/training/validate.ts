@@ -5,10 +5,20 @@ import { validateExpert } from "./match";
 import { tfsFor, TF_NAMES } from "./constants";
 export { EVENT_TFS, SETUP_TFS, TF_NAMES, tfsFor, type TrainTf } from "./constants";
 
-/** An empty form field arrives as "" or null: treat it as not set. */
-const optNum = z.preprocess((v) => (v === "" || v == null ? undefined : v), z.coerce.number().finite().positive().max(1e9).optional());
+/** An empty form field arrives as "" or null: treat it as not set. A value that is not a number gets a message naming the field. */
+const optNum = (label: string) => z.preprocess((v) => (v === "" || v == null ? undefined : v), z.coerce.number({ error: `${label} must be a number, like 4133.00.` }).finite(`${label} must be a number, like 4133.00.`).positive(`${label} must be above 0.`).max(1e9).optional());
 
-export const scenarioSchema = z
+const blank = (v: unknown) => v === "" || v == null;
+/** Only one end of the entry zone given: it is a single entry price, so use it for both ends. */
+function mirrorEntry(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = { ...(raw as Record<string, unknown>) };
+  if (blank(o.entryHigh) && !blank(o.entryLow)) o.entryHigh = o.entryLow;
+  else if (blank(o.entryLow) && !blank(o.entryHigh)) o.entryLow = o.entryHigh;
+  return o;
+}
+
+const scenarioObject = z
   .object({
     title: z.string().trim().min(1, "Give the scenario a title.").max(120),
     symbol: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{3,12}$/, "Enter a symbol such as XAUUSD.").refine((s) => instrumentFor(s) != null, "There is no price history for that symbol."),
@@ -18,10 +28,10 @@ export const scenarioSchema = z
     horizonMinutes: z.coerce.number().int().min(5, "Follow the trade for at least 5 minutes.").max(1440, "At most 24 hours."),
     lookbackHours: z.coerce.number().int().min(1).max(120),
     side: z.enum(["LONG", "SHORT"]).optional(),
-    entryLow: optNum,
-    entryHigh: optNum,
-    stopLoss: optNum,
-    takeProfit: optNum,
+    entryLow: optNum("Entry zone: bottom"),
+    entryHigh: optNum("Entry zone: top"),
+    stopLoss: optNum("Stop loss"),
+    takeProfit: optNum("Take profit"),
     notes: z.string().trim().max(4000, "Keep the notes under 4000 characters.").optional(),
     strategyId: z.string().trim().max(40).optional(),
     difficulty: z.coerce.number().int().min(1).max(3).default(2),
@@ -36,7 +46,8 @@ export const scenarioSchema = z
       if (bad) ctx.addIssue({ code: "custom", path: ["stopLoss"], message: bad });
     }
   });
-export type ScenarioInput = z.infer<typeof scenarioSchema>;
+export const scenarioSchema = z.preprocess(mirrorEntry, scenarioObject);
+export type ScenarioInput = z.infer<typeof scenarioObject>;
 
 export const attemptSchema = z.object({
   side: z.enum(["LONG", "SHORT"]),
