@@ -8,6 +8,7 @@ import { deleteScenarioAction, removeScenarioImageAction, saveScenarioAction, up
 import { cn } from "@/lib/cn";
 import type { Candle } from "@/lib/market-data/types";
 import type { ScenarioEdit } from "@/lib/training/scenarios";
+import type { Prefill } from "@/lib/training/prefill";
 import { EVENT_TFS, SETUP_TFS, TF_NAMES } from "@/lib/training/constants";
 import { TrainingChart, type ChartLine } from "./training-chart";
 import { useApi } from "./use-api";
@@ -33,24 +34,27 @@ const fromLocal = (local: string, tz: string): string | null => {
  * Author a training scenario: pick the moment, mark the expert answer on the real chart (you can see the future here),
  * explain it, and attach your annotated screenshot.
  */
-export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind = "SETUP" }: { initial: ScenarioEdit | null; startKind?: "SETUP" | "EVENT"; strategies: { id: string; name: string }[]; tz: string; tzOffsetMin: number }) {
+export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind = "SETUP", prefill }: { initial: ScenarioEdit | null; startKind?: "SETUP" | "EVENT"; prefill?: Prefill; strategies: { id: string; name: string }[]; tz: string; tzOffsetMin: number }) {
   const router = useRouter();
+  // a saved scenario wins, then values from a link, then the defaults for the kind
+  const pf = prefill ?? {};
+  const k0 = initial?.kind ?? pf.kind ?? startKind;
   const [f, setF] = useState({
-    title: initial?.title ?? "",
+    title: initial?.title ?? pf.title ?? "",
     symbol: initial?.symbol ?? "XAUUSD",
-    kind: initial?.kind ?? startKind,
-    at: toLocal(initial?.decisionAt ?? "", tz),
-    timeframe: initial?.timeframe ?? (startKind === "EVENT" ? "S5" : "M5"),
-    horizon: String(initial?.horizonMinutes ?? (startKind === "EVENT" ? 30 : 240)),
-    lookback: String(initial?.lookbackHours ?? (startKind === "EVENT" ? 1 : 24)),
-    side: (initial?.side ?? "") as "" | "LONG" | "SHORT",
-    entryLow: initial?.entryLow != null ? String(initial.entryLow) : "",
-    entryHigh: initial?.entryHigh != null ? String(initial.entryHigh) : "",
-    stopLoss: initial?.stopLoss != null ? String(initial.stopLoss) : "",
-    takeProfit: initial?.takeProfit != null ? String(initial.takeProfit) : "",
-    notes: initial?.notes ?? "",
+    kind: k0,
+    at: toLocal(initial?.decisionAt ?? pf.at ?? "", tz),
+    timeframe: initial?.timeframe ?? pf.timeframe ?? (k0 === "EVENT" ? "S5" : "M5"),
+    horizon: String(initial?.horizonMinutes ?? pf.horizon ?? (k0 === "EVENT" ? 30 : 240)),
+    lookback: String(initial?.lookbackHours ?? pf.lookback ?? (k0 === "EVENT" ? 1 : 24)),
+    side: (initial?.side ?? pf.side ?? "") as "" | "LONG" | "SHORT",
+    entryLow: initial?.entryLow != null ? String(initial.entryLow) : pf.entryLow != null ? String(pf.entryLow) : "",
+    entryHigh: initial?.entryHigh != null ? String(initial.entryHigh) : pf.entryHigh != null ? String(pf.entryHigh) : "",
+    stopLoss: initial?.stopLoss != null ? String(initial.stopLoss) : pf.stopLoss != null ? String(pf.stopLoss) : "",
+    takeProfit: initial?.takeProfit != null ? String(initial.takeProfit) : pf.takeProfit != null ? String(pf.takeProfit) : "",
+    notes: initial?.notes ?? pf.notes ?? "",
     strategyId: initial?.strategyId ?? "",
-    difficulty: String(initial?.difficulty ?? 2),
+    difficulty: String(initial?.difficulty ?? pf.difficulty ?? 2),
   });
   const [pick, setPick] = useState<Pick | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
