@@ -266,7 +266,7 @@ export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind =
               </div>
             )}
             <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-xs" />
-            <span className="text-[11px]">PNG, JPEG, WebP or GIF, up to 8 MB. On the live site this needs a Vercel Blob store (see the README).</span>
+            <span className="text-[11px]">PNG, JPEG, WebP or GIF, up to 4 MB. On the live site this needs a Vercel Blob store (see the README).</span>
           </div>
         </div>
 

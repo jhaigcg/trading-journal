@@ -8,7 +8,8 @@ import path from "node:path";
  * A stored "key" is either a relative path (local) or a full https URL (blob).
  */
 
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+// Vercel rejects request bodies over 4.5 MB before our code runs, so stay under that and give a clear message instead
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 const TYPES: Record<string, { ext: string; magic: (b: Buffer) => boolean }> = {
   "image/png": { ext: "png", magic: (b) => b.length > 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
@@ -28,7 +29,7 @@ export type UploadCheck = { ok: true; ext: string } | { ok: false; error: string
 export function checkImage(mime: string, bytes: Buffer): UploadCheck {
   const t = TYPES[mime];
   if (!t) return { ok: false, error: "Only PNG, JPEG, GIF or WebP images can be attached." };
-  if (bytes.length > MAX_UPLOAD_BYTES) return { ok: false, error: "That image is larger than 8 MB." };
+  if (bytes.length > MAX_UPLOAD_BYTES) return { ok: false, error: "That image is larger than 4 MB. Save it as a JPEG or WebP, or crop it, and try again." };
   if (!t.magic(bytes)) return { ok: false, error: "That file is not a valid image." };
   return { ok: true, ext: t.ext };
 }
