@@ -57,7 +57,7 @@ Manual entry (**Accounts & import → Add trade manually**) supports multiple fi
    - `DATABASE_URL`, `DIRECT_URL`: from Neon
    - `AUTH_SECRET`: 32+ random characters (`openssl rand -hex 32`)
    - `CRON_SECRET`: any random string (the daily safety-net sync uses it)
-   - `BLOB_READ_WRITE_TOKEN`: create a Vercel Blob store (Storage tab) so screenshots persist
+   - `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID`: create a **public** Vercel Blob store (Storage tab) and connect it to the project so screenshots persist (connecting adds one of these automatically)
    - `METAAPI_TOKEN`, `METAAPI_REGION`: only if you use the paid MetaApi option
 4. Open the Vercel URL, sign in, then connect your MT4 on **Accounts & import**. The EA needs your Vercel address added to MT4's WebRequest list (the page shows it).
 

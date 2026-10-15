@@ -4,7 +4,7 @@ import path from "node:path";
 
 /**
  * File storage for screenshots. Local disk in development (./.data/uploads, served through the
- * authenticated /api/files route); Vercel Blob in production when BLOB_READ_WRITE_TOKEN is set.
+ * authenticated /api/files route); Vercel Blob in production when BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID is set.
  * A stored "key" is either a relative path (local) or a full https URL (blob).
  */
 
@@ -19,7 +19,8 @@ const TYPES: Record<string, { ext: string; magic: (b: Buffer) => boolean }> = {
 const MIME_BY_EXT = Object.fromEntries(Object.entries(TYPES).map(([mime, t]) => [t.ext, mime]));
 
 const root = () => path.resolve(process.cwd(), ".data", "uploads");
-const blobEnabled = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+// a Blob store connected to the Vercel project provides either a read-write token or, on newer stores, just BLOB_STORE_ID (the SDK then signs in with the project's own identity)
+const blobEnabled = () => !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 
 export type UploadCheck = { ok: true; ext: string } | { ok: false; error: string };
 
