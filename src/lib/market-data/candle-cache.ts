@@ -43,8 +43,12 @@ export async function getCandles(
       const c = have.get(p);
       if (!c) return true;
       const [, end] = periodRange(native, p);
-      const complete = end + COMPLETE_AFTER_S <= nowSec;
-      return !complete && now.getTime() - c.fetchedAt.getTime() > STALE_PARTIAL_MS;
+      const completeAt = end + COMPLETE_AFTER_S;
+      // a copy taken after the period was complete is final (weekends with no data stay "no data")
+      if (c.fetchedAt.getTime() / 1000 >= completeAt) return false;
+      // a copy taken while the period was still running may be empty or partial (the source publishes a day only once it
+      // has ended): fetch it again as soon as the period is complete, and meanwhile refresh it when it goes stale
+      return completeAt <= nowSec || now.getTime() - c.fetchedAt.getTime() > STALE_PARTIAL_MS;
     });
 
     const limit = opts.maxFetch ?? 14;

@@ -192,6 +192,22 @@ describe("getCandles (database cache)", () => {
     expect(p.calls).toHaveLength(2); // stale: refreshed
   });
 
+  it("a day fetched while it was still in progress is fetched again once it has ended, and then left alone", async (ctx) => {
+    if (!reachable) return ctx.skip();
+    const p = new FakeProvider();
+    const day = Date.UTC(2026, 8, 10) / 1000; // Thursday
+    const midDay = new Date((day + 12 * 3600) * 1000);
+    await getCandles(SYM, "M1", day, day + 3600, { provider: p, now: midDay, gapMs: 0 }); // the source may have had nothing or only part of it
+    expect(p.calls).toHaveLength(1);
+    // the day ends; nobody asked in the meantime, so the stored copy is older than the finished day
+    const nextDay = new Date((day + 86_400 + 2 * 3600) * 1000);
+    await getCandles(SYM, "M1", day, day + 3600, { provider: p, now: nextDay, gapMs: 0 });
+    expect(p.calls).toHaveLength(2);
+    // that copy was taken after the day was complete: final
+    await getCandles(SYM, "M1", day, day + 3600, { provider: p, now: new Date(nextDay.getTime() + 3 * 3600_000), gapMs: 0 });
+    expect(p.calls).toHaveLength(2);
+  });
+
   it("reports unsupported symbols", async () => {
     const r = await getCandles("COTTON", "M5", T0, T0 + 3600);
     expect(r).toEqual({ candles: [], incomplete: false, unsupported: true });
