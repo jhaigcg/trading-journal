@@ -208,6 +208,27 @@ describe("getCandles (database cache)", () => {
     expect(p.calls).toHaveLength(2);
   });
 
+  it("a slow download does not hold the request up: it answers with what it has, flagged incomplete, and keeps what finished", async (ctx) => {
+    if (!reachable) return ctx.skip();
+    class Slow extends FakeProvider {
+      async fetchPeriod(s: string, native: NativeTimeframe, period: string): Promise<Candle[]> {
+        if (period === "2026-09-15") return new Promise(() => undefined); // never answers
+        return super.fetchPeriod(s, native, period);
+      }
+    }
+    const p = new Slow();
+    const mon = Date.UTC(2026, 8, 14) / 1000; // the 14th downloads fine, the 15th hangs
+    const started = Date.now();
+    const r = await getCandles(SYM, "M1", mon + 23 * 3600, mon + 25 * 3600, { provider: p, now: NOW, gapMs: 0, budgetMs: 150 });
+    expect(Date.now() - started).toBeLessThan(3000);
+    expect(r.incomplete).toBe(true);
+    expect(r.candles.length).toBe(60); // the last hour of the 14th, which did arrive
+    // the day that finished is kept: asking again does not download it a second time
+    const before = p.calls.filter((c) => c.endsWith("2026-09-14")).length;
+    await getCandles(SYM, "M1", mon + 23 * 3600, mon + 24 * 3600, { provider: p, now: NOW, gapMs: 0, budgetMs: 150 });
+    expect(p.calls.filter((c) => c.endsWith("2026-09-14")).length).toBe(before);
+  });
+
   it("reports unsupported symbols", async () => {
     const r = await getCandles("COTTON", "M5", T0, T0 + 3600);
     expect(r).toEqual({ candles: [], incomplete: false, unsupported: true });

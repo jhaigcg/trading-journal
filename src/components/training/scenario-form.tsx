@@ -152,6 +152,13 @@ export function ScenarioForm({ initial, strategies, tz, tzOffsetMin, startKind =
             {chartProblem ?? previewError}
           </p>
         )}
+        {preview && preview.candles.length === 0 && !loading && (
+          <p role="alert" className="rounded-control bg-loss-bg px-3 py-2 text-sm text-loss">
+            {preview.incomplete
+              ? "The price source is slow or limiting requests right now, so these prices could not be downloaded yet. Press Reload chart again in a minute: each try keeps what it managed to download."
+              : "There is no price data for this time (the market was closed, or it is too early for that day to be published)."}
+          </p>
+        )}
         {preview && preview.candles.length > 0 ? (
           <>
             <TrainingChart candles={preview.candles} tzOffsetMin={tzOffsetMin} height={460} lines={lines} bands={bands} decisionT={decisionT ?? undefined} decisionLabel="Decision point" onPick={pick ? onPick : undefined} crosshairCursor={!!pick} visibleBars={160} />

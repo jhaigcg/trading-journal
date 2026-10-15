@@ -8,6 +8,7 @@ import { NATIVE, TF_SECONDS, type Candle, type MarketDataProvider, type Timefram
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const STALE_PARTIAL_MS = 10 * 60_000; // a period that is still in progress is re-downloaded after this long
 const COMPLETE_AFTER_S = 3600; // a period counts as complete one hour after it ends
+const DOWNLOAD_BUDGET_MS = 45_000; // longest a request waits for downloads before answering with what it has
 
 export interface CandleResult {
   candles: Candle[];
@@ -26,7 +27,7 @@ export async function getCandles(
   tf: Timeframe,
   fromSec: number,
   toSec: number,
-  opts: { provider?: MarketDataProvider; now?: Date; maxFetch?: number; gapMs?: number; concurrency?: number } = {},
+  opts: { provider?: MarketDataProvider; now?: Date; maxFetch?: number; gapMs?: number; concurrency?: number; budgetMs?: number } = {},
 ): Promise<CandleResult> {
   const provider = opts.provider ?? dukascopy;
   if (!provider.supports(symbol)) return { candles: [], incomplete: false, unsupported: true };
@@ -53,8 +54,10 @@ export async function getCandles(
 
     const limit = opts.maxFetch ?? 14;
     if (todo.length > limit) incomplete = true;
-    // a few downloads at a time: a window spanning several days takes as long as the slowest day, not the sum of them
-    await mapPool(todo.slice(0, limit), opts.concurrency ?? 4, async (period) => {
+    // a few downloads at a time: a window spanning several days takes as long as the slowest day, not the sum of them.
+    // The source is sometimes slow or rate-limited; past the time budget we answer with what is stored (flagged incomplete)
+    // rather than let the whole request time out, and whatever has finished downloading is kept for the next try.
+    const downloads = mapPool(todo.slice(0, limit), opts.concurrency ?? 4, async (period) => {
       if (opts.gapMs) await sleep(opts.gapMs);
       try {
         const candles = await provider.fetchPeriod(symbol, native, period);
@@ -76,6 +79,14 @@ export async function getCandles(
         incomplete = true; // leave uncovered so the next request retries it
       }
     });
+    const budget = opts.budgetMs ?? DOWNLOAD_BUDGET_MS;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const outOfTime = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(true), budget);
+    });
+    const timedOut = await Promise.race([downloads.then(() => false), outOfTime]);
+    clearTimeout(timer);
+    if (timedOut) incomplete = true;
   }
 
   const rows = await db.candle.findMany({
